@@ -1,0 +1,27 @@
+
+# Android
+.gradle/
+**/build/
+local.properties
+.idea/
+*.iml
+.cxx/
+.externalNativeBuild/
+
+# Firebase configuration and secrets
+google-services.json
+**/google-services.json
+*service-account*.json
+*service_account*.json
+*.jks
+*.keystore
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+secrets/
+
+# System files
+.DS_Store
+Thumbs.db
