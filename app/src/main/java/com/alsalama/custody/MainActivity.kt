@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -409,7 +410,91 @@ private fun ExpenseQuickEntryScreen(
     }
 }
 
-private data class ExpenseRecord(val description: String, val amount: Double, val createdAt: Date?)
+private data class ExpenseRecord(
+    val id: String,
+    val description: String,
+    val amount: Double,
+    val category: String,
+    val needsManagerReview: Boolean,
+    val createdAt: Date?
+)
+
+private fun formatExpenseAmount(amount: Double): String =
+    BigDecimal.valueOf(amount).stripTrailingZeros().toPlainString()
+
+private fun formatArabicDateTime(date: Date): String {
+    val dateText = SimpleDateFormat("yyyy/MM/dd - hh:mm", Locale.US).format(date)
+    val period = if (Calendar.getInstance().apply { time = date }.get(Calendar.HOUR_OF_DAY) < 12) {
+        "صباحًا"
+    } else {
+        "مساءً"
+    }
+    return dateText + " " + period
+}
+
+@Composable
+private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(17.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isNew) Color(0xFFF0F8F3) else Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isNew) 3.dp else 1.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(17.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    item.description,
+                    modifier = Modifier.weight(1f),
+                    color = SalamaDark,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 27.sp
+                )
+                if (isNew) {
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(
+                        "جديد",
+                        modifier = Modifier
+                            .background(Color(0xFFD9EFE2), RoundedCornerShape(9.dp))
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        color = Color(0xFF176B45),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(9.dp))
+            Text(
+                formatExpenseAmount(item.amount) + " جنيه",
+                color = SalamaGreen,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(modifier = Modifier.height(7.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "التصنيف: " + item.category.ifBlank { "غير مصنف" },
+                    color = if (item.category.isBlank()) Color(0xFFB7791F) else MutedText,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (item.needsManagerReview) {
+                    Spacer(modifier = Modifier.size(7.dp))
+                    Text("يحتاج مراجعة", color = Color(0xFFB7791F), fontSize = 12.sp)
+                }
+            }
+            item.createdAt?.let { date ->
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(formatArabicDateTime(date), color = MutedText, fontSize = 12.sp)
+            }
+        }
+    }
+}
 
 @Composable
 private fun PersonExpensesScreen(
@@ -420,6 +505,14 @@ private fun PersonExpensesScreen(
     onBack: () -> Unit,
     onSignOut: () -> Unit
 ) {
+    val context = LocalContext.current
+    val seenPreferences = remember(person) {
+        context.getSharedPreferences("seen_expenses_$person", Context.MODE_PRIVATE)
+    }
+    var seenExpenseIds by remember(person) {
+        mutableStateOf(seenPreferences.getStringSet("seen_ids", emptySet())?.toSet() ?: emptySet())
+    }
+    var visibleExpenseIds by remember(person) { mutableStateOf<Set<String>>(emptySet()) }
     var expenses by remember(person) { mutableStateOf<List<ExpenseRecord>>(emptyList()) }
     var loading by remember(person) { mutableStateOf(true) }
     var errorText by remember(person) { mutableStateOf<String?>(null) }
@@ -437,9 +530,12 @@ private fun PersonExpensesScreen(
                         .filter { it.getString("employeeName") in names && it.getString("status") == "active" }
                         .map { doc ->
                             ExpenseRecord(
-                                doc.getString("description").orEmpty(),
-                                doc.getDouble("amount") ?: 0.0,
-                                doc.getTimestamp("createdAt")?.toDate()
+                                id = doc.id,
+                                description = doc.getString("description").orEmpty(),
+                                amount = doc.getDouble("amount") ?: 0.0,
+                                category = doc.getString("category").orEmpty(),
+                                needsManagerReview = doc.getBoolean("needsManagerReview") ?: false,
+                                createdAt = doc.getTimestamp("createdAt")?.toDate()
                             )
                         }
                         .sortedByDescending { it.createdAt ?: Date(0) }
@@ -447,7 +543,12 @@ private fun PersonExpensesScreen(
                     loading = false
                 }
             }
-        onDispose { registration.remove() }
+        onDispose {
+            registration.remove()
+            seenPreferences.edit()
+                .putStringSet("seen_ids", (seenExpenseIds + visibleExpenseIds).toSet())
+                .apply()
+        }
     }
 
     val today = Calendar.getInstance()
@@ -459,7 +560,11 @@ private fun PersonExpensesScreen(
         } ?: false
     }
     val shown = if (showAll) expenses else todayExpenses
-    val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd - hh:mm a", Locale.getDefault()) }
+    val newExpenses = shown.filter { it.id !in seenExpenseIds }
+    val previousExpenses = shown.filter { it.id in seenExpenseIds }
+    androidx.compose.runtime.SideEffect {
+        visibleExpenseIds = shown.map { it.id }.toSet()
+    }
 
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -497,24 +602,37 @@ private fun PersonExpensesScreen(
                         Text(if (showAll) "لا توجد مصروفات مسجلة لهذه العهدة حتى الآن" else "لا توجد مصروفات مسجلة اليوم",
                             color = MutedText, fontSize = 17.sp, textAlign = TextAlign.Center, lineHeight = 25.sp)
                     }
-                    else -> Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
-                        shown.forEach { item ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                            ) {
-                                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                                    Text(item.description, color = SalamaDark, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                    Spacer(modifier = Modifier.height(7.dp))
-                                    Text(String.format(Locale.getDefault(), "%.2f جنيه", item.amount),
-                                        color = SalamaGreen, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                                    item.createdAt?.let { date ->
-                                        Spacer(modifier = Modifier.height(5.dp))
-                                        Text(dateFormat.format(date), color = MutedText, fontSize = 12.sp)
-                                    }
-                                }
+                    else -> Column(
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(11.dp)
+                    ) {
+                        if (newExpenses.isNotEmpty()) {
+                            Text(
+                                "مصروفات جديدة (" + newExpenses.size + ")",
+                                color = SalamaGreen,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            newExpenses.forEach { item ->
+                                ExpenseEntryCard(item = item, isNew = true)
+                            }
+                        }
+                        if (previousExpenses.isNotEmpty()) {
+                            if (newExpenses.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(5.dp))
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(1.dp)
+                                        .background(Color(0xFFD5DFD9))
+                                )
+                                Spacer(modifier = Modifier.height(5.dp))
+                            }
+                            Text(
+                                "مصروفات سابقة (" + previousExpenses.size + ")",
+                                color = MutedText,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            previousExpenses.forEach { item ->
+                                ExpenseEntryCard(item = item, isNew = false)
                             }
                         }
                     }
