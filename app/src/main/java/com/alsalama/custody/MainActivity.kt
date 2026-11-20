@@ -65,18 +65,18 @@ private data class LoginAccount(
 
 // رمز الدخول يحدد واجهة الموظف فقط.
 private val loginAccounts = listOf(
-    LoginAccount(charArrayOf(52, 54, 57, 49, 51, 54).concatToString(), "عمرو سامي", "مدير التطبيق", listOf(
+    LoginAccount(charArrayOf(52.toChar(), 54.toChar(), 57.toChar(), 49.toChar(), 51.toChar(), 54.toChar()).concatToString(), "عمرو سامي", "مدير التطبيق", listOf(
         "إدارة المستخدمين والصلاحيات", "جميع العهد والمصروفات",
         "التقارير والإعدادات", "تسجيل مصروفاته ومصروفات أحمد حسن"
     )),
-    LoginAccount(charArrayOf(52, 52, 49, 52, 48, 48).concatToString(), "سامي هنداوي", "الإدارة المالية", listOf(
+    LoginAccount(charArrayOf(52.toChar(), 52.toChar(), 49.toChar(), 52.toChar(), 48.toChar(), 48.toChar()).concatToString(), "سامي هنداوي", "الإدارة المالية", listOf(
         "لوحة متابعة العهد الأربعة", "تمويل العهد",
         "تسوية وإغلاق العهد", "الإجماليات والأرصدة والتقارير"
     )),
-    LoginAccount(charArrayOf(49, 48, 48, 49, 48, 48).concatToString(), "عبدالله", "مسؤول العمليات", listOf(
+    LoginAccount(charArrayOf(49.toChar(), 48.toChar(), 48.toChar(), 49.toChar(), 48.toChar(), 48.toChar()).concatToString(), "عبدالله", "مسؤول العمليات", listOf(
         "تسجيل مصروفاته ومصروفات أحمد حسن", "الاطلاع على جميع العهد والمصروفات"
     )),
-    LoginAccount(charArrayOf(50, 48, 48, 50, 48, 48).concatToString(), "أحمد حمدي", "موظف", listOf(
+    LoginAccount(charArrayOf(50.toChar(), 48.toChar(), 48.toChar(), 50.toChar(), 48.toChar(), 48.toChar()).concatToString(), "أحمد حمدي", "موظف", listOf(
         "تسجيل مصروفاته الشخصية", "الاطلاع على بياناته المالية فقط"
     ))
 )
