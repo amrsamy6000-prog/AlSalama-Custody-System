@@ -42,6 +42,15 @@ class ExpenseCategorizerTest {
     @Test fun foodAndMaintenanceExamplesAreRecognized() {
         assertEquals("مأكولات ومشروبات", classifyExpense("قهوة على الطريق").category)
         assertEquals("صيانة ومصنعية", classifyExpense("خرط طنابير الفيرنا").category)
+        assertEquals("صيانة ومصنعية", classifyExpense("مصنعية مخرطة وفريزة").category)
         assertEquals("خامات وقطع غيار ومستلزمات تشغيل", classifyExpense("مسامير وصواميل لمساحات الخلاط").category)
+    }
+
+    @Test fun ambiguousDescriptionsStayInOtherForManagerReview() {
+        listOf("مصنعية محمد النمس", "منظفات للحمام").forEach { description ->
+            val result = classifyExpense(description)
+            assertEquals("أخرى", result.category)
+            assertTrue(result.needsManagerReview)
+        }
     }
 }
