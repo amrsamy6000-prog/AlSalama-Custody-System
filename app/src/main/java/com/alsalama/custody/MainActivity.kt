@@ -1,10 +1,19 @@
 package com.alsalama.custody
 
 import android.content.Context
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -20,6 +29,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -34,6 +44,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -42,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -304,6 +316,21 @@ private fun ExpenseQuickEntryScreen(
     var details by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
     var saveMessage by remember { mutableStateOf<String?>(null) }
+    var isPendingSync by remember { mutableStateOf(false) }
+    var saveFailed by remember { mutableStateOf(false) }
+    var feedbackAnimationKey by remember { mutableStateOf(0) }
+    val feedbackScale = remember { Animatable(0.72f) }
+    val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 70) }
+    DisposableEffect(toneGenerator) {
+        onDispose { toneGenerator.release() }
+    }
+    LaunchedEffect(feedbackAnimationKey) {
+        if (feedbackAnimationKey > 0) {
+            feedbackScale.snapTo(0.72f)
+            feedbackScale.animateTo(1.12f, tween(220))
+            feedbackScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+        }
+    }
     val amountValue = amount.trim().replace(',', '.').toDoubleOrNull()
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
@@ -334,7 +361,11 @@ private fun ExpenseQuickEntryScreen(
                     val cleanAmount = amountValue
                     if (cleanDetails.isNotEmpty() && cleanAmount != null && cleanAmount > 0.0) {
                         isSaving = true
-                        saveMessage = null
+                        saveMessage = "تمام، المصروف اتحفظ على جهازك وهيتبعت أول ما النت يرجع"
+                        isPendingSync = true
+                        saveFailed = false
+                        feedbackAnimationKey += 1
+                        toneGenerator.startTone(ToneGenerator.TONE_PROP_ACK, 180)
                         val classification = classifyExpense(cleanDetails)
                         val expense = hashMapOf<String, Any>(
                             "description" to cleanDetails,
@@ -357,17 +388,21 @@ private fun ExpenseQuickEntryScreen(
                             .document(expenseId)
                             .set(expense)
                             .addOnSuccessListener {
-                                saveMessage = "تمت مزامنة المصروف بنجاح"
+                                isPendingSync = false
+                                saveFailed = false
+                                saveMessage = "عاش! المصروف اتسجل بنجاح"
+                                feedbackAnimationKey += 1
                             }
                             .addOnFailureListener { error ->
-                                saveMessage = "تعذرت مزامنة المصروف: ${error.localizedMessage ?: "سيتم مراجعة الاتصال وقواعد Firebase"}"
+                                isPendingSync = false
+                                saveFailed = true
+                                saveMessage = "مقدرناش نأكد تسجيل المصروف. راجع الاتصال وحاول تاني."
                             }
                         // Firestore persists this write locally and queues it while offline.
                         // Do not keep the form locked while waiting for the server acknowledgement.
                         isSaving = false
                         details = ""
                         amount = ""
-                        saveMessage = "تم حفظ المصروف على الجهاز، وبانتظار المزامنة عند عودة الإنترنت"
                     }
                 },
                 enabled = !isSaving && details.isNotBlank() && amountValue != null && amountValue > 0.0,
@@ -381,15 +416,70 @@ private fun ExpenseQuickEntryScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
-            if (saveMessage != null) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = saveMessage.orEmpty(),
-                    modifier = Modifier.fillMaxWidth(),
-                    color = if (saveMessage == "تم تسجيل المصروف بنجاح") SalamaGreen else Color(0xFFB45309),
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center
-                )
+            AnimatedVisibility(
+                visible = saveMessage != null,
+                enter = fadeIn() + scaleIn()
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = when {
+                            saveFailed -> Color(0xFFFFEEEE)
+                            isPendingSync -> Color(0xFFFFF6E5)
+                            else -> Color(0xFFE8F5EE)
+                        }
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .scale(feedbackScale.value)
+                                .background(
+                                    when {
+                                        saveFailed -> Color(0xFFF9DADA)
+                                        isPendingSync -> Color(0xFFFFE7B5)
+                                        else -> Color(0xFFCDEBD8)
+                                    },
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = when {
+                                    saveFailed -> "!"
+                                    isPendingSync -> "☁"
+                                    else -> "✓"
+                                },
+                                color = when {
+                                    saveFailed -> Color(0xFFB42318)
+                                    isPendingSync -> Color(0xFF9A6700)
+                                    else -> Color(0xFF176B55)
+                                },
+                                fontSize = 27.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                        Spacer(modifier = Modifier.size(12.dp))
+                        Text(
+                            text = saveMessage.orEmpty(),
+                            modifier = Modifier.weight(1f),
+                            color = when {
+                                saveFailed -> Color(0xFFB42318)
+                                isPendingSync -> Color(0xFF805600)
+                                else -> SalamaDark
+                            },
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Start
+                        )
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(44.dp))
             Card(
