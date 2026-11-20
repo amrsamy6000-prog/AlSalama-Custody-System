@@ -1,8 +1,7 @@
 package com.alsalama.custody
 
 import android.content.Context
-import android.media.AudioManager
-import android.media.ToneGenerator
+import android.media.RingtoneManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -54,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -77,6 +77,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.delay
 
 private val SalamaGreen = Color(0xFF176B55)
 private val SalamaDark = Color(0xFF153F35)
@@ -320,9 +321,12 @@ private fun ExpenseQuickEntryScreen(
     var saveFailed by remember { mutableStateOf(false) }
     var feedbackAnimationKey by remember { mutableStateOf(0) }
     val feedbackScale = remember { Animatable(0.72f) }
-    val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 70) }
-    DisposableEffect(toneGenerator) {
-        onDispose { toneGenerator.release() }
+    val context = LocalContext.current
+    LaunchedEffect(saveMessage) {
+        if (saveMessage != null) {
+            delay(10_000L)
+            saveMessage = null
+        }
     }
     LaunchedEffect(feedbackAnimationKey) {
         if (feedbackAnimationKey > 0) {
@@ -342,14 +346,14 @@ private fun ExpenseQuickEntryScreen(
             Spacer(modifier = Modifier.height(28.dp))
             OutlinedTextField(
                 value = details, onValueChange = { details = it },
-                modifier = Modifier.fillMaxWidth(), minLines = 2,
+                modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) saveMessage = null }, minLines = 2,
                 label = { Text("بيان المصروف") }, placeholder = { Text("اكتب المصروف باختصار") },
                 shape = RoundedCornerShape(16.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
                 value = amount, onValueChange = { amount = it },
-                modifier = Modifier.fillMaxWidth(), singleLine = true,
+                modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) saveMessage = null }, singleLine = true,
                 label = { Text("المبلغ بالجنيه") }, placeholder = { Text("0.00") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 shape = RoundedCornerShape(16.dp)
@@ -365,7 +369,10 @@ private fun ExpenseQuickEntryScreen(
                         isPendingSync = true
                         saveFailed = false
                         feedbackAnimationKey += 1
-                        toneGenerator.startTone(ToneGenerator.TONE_PROP_ACK, 180)
+                        RingtoneManager.getRingtone(
+                            context,
+                            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                        )?.play()
                         val classification = classifyExpense(cleanDetails)
                         val expense = hashMapOf<String, Any>(
                             "description" to cleanDetails,
