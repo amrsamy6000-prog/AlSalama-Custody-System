@@ -384,14 +384,6 @@ private fun PersonExpensesScreen(
                 Spacer(modifier = Modifier.height(18.dp))
                 FinancialSummaryCard()
                 Spacer(modifier = Modifier.height(18.dp))
-                Text(
-                    "تفاصيل المصروفات",
-                    modifier = Modifier.fillMaxWidth(),
-                    color = SalamaDark,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(10.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -462,65 +454,65 @@ private fun PersonExpensesScreen(
 
 @Composable
 private fun FinancialSummaryCard() {
-    Card(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
-            Text(
-                "الملخص المالي",
-                color = SalamaDark,
-                fontSize = 19.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-            FinancialSummaryRow("قيمة العهدة", "لم يُضف تمويل بعد")
-            Spacer(modifier = Modifier.height(12.dp))
-            FinancialSummaryRow("إجمالي المصروفات", "لا توجد سجلات بعد")
-            Spacer(modifier = Modifier.height(12.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF1F5F3), RoundedCornerShape(14.dp))
-                    .padding(horizontal = 13.dp, vertical = 14.dp)
-            ) {
-                Column {
-                    Text("المتبقي", color = MutedText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "سيظهر بعد إضافة التمويل وتسجيل المصروفات",
-                        color = SalamaDark,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 21.sp
-                    )
-                }
-            }
-        }
+        CompactFinancialValue(
+            label = "قيمة العهدة",
+            value = "—",
+            background = Color(0xFFEAF0F7),
+            valueColor = Color(0xFF315A83),
+            modifier = Modifier.weight(1f)
+        )
+        CompactFinancialValue(
+            label = "المصروفات",
+            value = "—",
+            background = Color(0xFFFFF2E5),
+            valueColor = Color(0xFFB66A20),
+            modifier = Modifier.weight(1f)
+        )
+        CompactFinancialValue(
+            label = "المتبقي",
+            value = "—",
+            background = Color(0xFFE8F4EC),
+            valueColor = Color(0xFF23734D),
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
 @Composable
-private fun FinancialSummaryRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+private fun CompactFinancialValue(
+    label: String,
+    value: String,
+    background: Color,
+    valueColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .background(background, RoundedCornerShape(14.dp))
+            .padding(horizontal = 7.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             label,
-            modifier = Modifier.weight(1f),
-            color = MutedText,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
+            color = SalamaDark,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            maxLines = 1
         )
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             value,
-            color = SalamaDark,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.End
+            color = valueColor,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
+            maxLines = 1
         )
     }
 }
