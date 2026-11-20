@@ -1,11 +1,11 @@
 package com.alsalama.custody
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
@@ -177,10 +177,17 @@ private fun FactoryLogoMark() {
 
 @Composable
 private fun LoginScreen() {
-    var signedInAccount by remember { mutableStateOf<LoginAccount?>(null) }
+    val context = LocalContext.current
+    val preferences = remember { context.getSharedPreferences("custody_app", Context.MODE_PRIVATE) }
+    var signedInAccount by remember {
+        mutableStateOf(loginAccounts.firstOrNull { it.code == preferences.getString("selected_code", null) })
+    }
 
     if (signedInAccount != null) {
-        SignedInScreen(account = signedInAccount!!, onSignOut = { signedInAccount = null })
+        SignedInScreen(account = signedInAccount!!, onSignOut = {
+            preferences.edit().remove("selected_code").apply()
+            signedInAccount = null
+        })
         return
     }
     var accessCode by remember { mutableStateOf("") }
@@ -295,6 +302,7 @@ private fun LoginScreen() {
                                 } else {
                                     val account = findAccountByCode(accessCode.trim())
                                     if (account != null) {
+                                        preferences.edit().putString("selected_code", account.code).apply()
                                         signedInAccount = account
                                         accessCode = ""
                                         message = null
