@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "668616133079",
+    "project_id": "salama-custody",
+    "storage_bucket": "salama-custody.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:668616133079:android:0bb410e0356b27af412392",
+        "android_client_info": {
+          "package_name": "com.alsalama.custody"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAocuvubggbt_0fUdPFosdO83VStapxm6w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
