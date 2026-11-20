@@ -432,8 +432,25 @@ private fun formatArabicDateTime(date: Date): String {
     return dateText + " " + period
 }
 
+private fun displayExpenseCategory(category: String): String = when (category) {
+    "صيانة ومصنعية" -> "صيانة سيارات"
+    "خامات وقطع غيار ومستلزمات تشغيل", "أدوات وسلامة ومستلزمات عامة" -> "مستلزمات ورشة"
+    else -> category.ifBlank { "أخرى" }
+}
+
+private fun expenseCategoryIcon(category: String): String = when (displayExpenseCategory(category)) {
+    "مأكولات ومشروبات" -> "🥪"
+    "مواصلات وانتقالات" -> "🚚"
+    "وقود" -> "⛽"
+    "صيانة سيارات" -> "🚗"
+    "مستلزمات ورشة" -> "🛠️"
+    "كارتات ورسوم عبور" -> "🛣️"
+    else -> "📌"
+}
+
 @Composable
 private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
+    val categoryName = displayExpenseCategory(item.category)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(17.dp),
@@ -475,22 +492,38 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
                 fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold
             )
-            Spacer(modifier = Modifier.height(7.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "التصنيف: " + item.category.ifBlank { "غير مصنف" },
-                    color = if (item.category.isBlank()) Color(0xFFB7791F) else MutedText,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                if (item.needsManagerReview) {
-                    Spacer(modifier = Modifier.size(7.dp))
-                    Text("يحتاج مراجعة", color = Color(0xFFB7791F), fontSize = 12.sp)
-                }
-            }
             item.createdAt?.let { date ->
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(formatArabicDateTime(date), color = MutedText, fontSize = 12.sp)
+            }
+            Spacer(modifier = Modifier.height(9.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(5.dp)
+                ) {
+                    Text(
+                        categoryName,
+                        color = MutedText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(expenseCategoryIcon(categoryName), fontSize = 15.sp)
+                    if (item.needsManagerReview) {
+                        Text(
+                            "يحتاج مراجعة",
+                            modifier = Modifier
+                                .background(Color(0xFFFFF1D8), RoundedCornerShape(7.dp))
+                                .padding(horizontal = 7.dp, vertical = 3.dp),
+                            color = Color(0xFF9A6718),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
         }
     }
