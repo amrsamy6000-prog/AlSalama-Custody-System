@@ -54,6 +54,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 
 private val SalamaGreen = Color(0xFF176B55)
 private val SalamaDark = Color(0xFF153F35)
@@ -286,6 +288,9 @@ private fun ExpenseQuickEntryScreen(
 ) {
     var amount by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
+    var isSaving by remember { mutableStateOf(false) }
+    var saveMessage by remember { mutableStateOf<String?>(null) }
+    val amountValue = amount.trim().replace(',', '.').toDoubleOrNull()
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
             TopBar(onSignOut)
@@ -310,12 +315,57 @@ private fun ExpenseQuickEntryScreen(
             )
             Spacer(modifier = Modifier.height(22.dp))
             Button(
-                onClick = { },
-                enabled = false,
+                onClick = {
+                    val cleanDetails = details.trim()
+                    val cleanAmount = amountValue
+                    if (cleanDetails.isNotEmpty() && cleanAmount != null && cleanAmount > 0.0) {
+                        isSaving = true
+                        saveMessage = null
+                        val expense = hashMapOf<String, Any>(
+                            "description" to cleanDetails,
+                            "amount" to cleanAmount,
+                            "currency" to "EGP",
+                            "employeeName" to account.displayName,
+                            "employeeCode" to account.code,
+                            "createdAt" to FieldValue.serverTimestamp(),
+                            "status" to "active"
+                        )
+                        FirebaseFirestore.getInstance()
+                            .collection("expenses")
+                            .add(expense)
+                            .addOnSuccessListener {
+                                isSaving = false
+                                details = ""
+                                amount = ""
+                                saveMessage = "تم تسجيل المصروف بنجاح"
+                            }
+                            .addOnFailureListener { error ->
+                                isSaving = false
+                                saveMessage = "تعذر تسجيل المصروف: ${error.localizedMessage ?: "راجع اتصال الإنترنت وقواعد Firebase"}"
+                            }
+                    }
+                },
+                enabled = !isSaving && details.isNotBlank() && amountValue != null && amountValue > 0.0,
                 modifier = Modifier.fillMaxWidth().height(60.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
-            ) { Text("تسجيل المصروف", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
+            ) {
+                Text(
+                    if (isSaving) "جارٍ تسجيل المصروف..." else "تسجيل المصروف",
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            if (saveMessage != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = saveMessage.orEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (saveMessage == "تم تسجيل المصروف بنجاح") SalamaGreen else Color(0xFFB45309),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
             Spacer(modifier = Modifier.height(44.dp))
             Card(
                 modifier = Modifier
