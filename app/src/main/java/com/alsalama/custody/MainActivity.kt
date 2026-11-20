@@ -1,7 +1,11 @@
 package com.alsalama.custody
 
 import android.content.Context
-import android.media.RingtoneManager
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -309,6 +313,69 @@ private fun TopBar(onSignOut: () -> Unit) {
 }
 
 @Composable
+private fun playSalamaSuccessSound() {
+    // Original in-app success chime: three soft, bright notes.
+    // It is synthesized locally and does not use the phone's notification sounds.
+    val sampleRate = 44_100
+    val durationMs = 620
+    val sampleCount = sampleRate * durationMs / 1_000
+    val samples = ShortArray(sampleCount)
+    val notes = listOf(
+        Triple(659.25, 0.00, 0.22),
+        Triple(783.99, 0.16, 0.24),
+        Triple(987.77, 0.34, 0.28)
+    )
+
+    for (i in samples.indices) {
+        val time = i.toDouble() / sampleRate
+        var value = 0.0
+        for ((frequency, start, length) in notes) {
+            val localTime = time - start
+            if (localTime >= 0.0 && localTime < length) {
+                val attack = (localTime / 0.018).coerceIn(0.0, 1.0)
+                val release = ((length - localTime) / 0.075).coerceIn(0.0, 1.0)
+                val envelope = minOf(attack, release)
+                val fundamental = kotlin.math.sin(2.0 * Math.PI * frequency * localTime)
+                val shimmer = 0.22 * kotlin.math.sin(2.0 * Math.PI * frequency * 2.01 * localTime)
+                value += (fundamental + shimmer) * envelope * 0.24
+            }
+        }
+        samples[i] = (value.coerceIn(-0.95, 0.95) * Short.MAX_VALUE).toInt().toShort()
+    }
+
+    val audioFormat = AudioFormat.Builder()
+        .setSampleRate(sampleRate)
+        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+        .build()
+    val audioAttributes = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build()
+
+    val track = AudioTrack.Builder()
+        .setAudioAttributes(audioAttributes)
+        .setAudioFormat(audioFormat)
+        .setTransferMode(AudioTrack.MODE_STATIC)
+        .setBufferSizeInBytes(samples.size * 2)
+        .build()
+
+    try {
+        track.write(samples, 0, samples.size)
+        track.play()
+        Handler(Looper.getMainLooper()).postDelayed({
+            try {
+                if (track.playState == AudioTrack.PLAYSTATE_PLAYING) track.stop()
+            } catch (_: IllegalStateException) {
+            } finally {
+                track.release()
+            }
+        }, durationMs.toLong() + 180L)
+    } catch (_: Exception) {
+        track.release()
+    }
+}
+
 private fun ExpenseQuickEntryScreen(
     account: LoginAccount,
     onProfessional: () -> Unit,
@@ -372,10 +439,7 @@ private fun ExpenseQuickEntryScreen(
                         isPendingSync = true
                         saveFailed = false
                         feedbackAnimationKey += 1
-                        RingtoneManager.getRingtone(
-                            context,
-                            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                        )?.play()
+                        playSalamaSuccessSound()
                         val classification = classifyExpense(cleanDetails)
                         val expense = hashMapOf<String, Any>(
                             "description" to cleanDetails,
