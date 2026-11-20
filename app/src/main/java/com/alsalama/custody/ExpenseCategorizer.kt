@@ -43,12 +43,11 @@ internal fun classifyExpense(description: String): ExpenseClassification {
         return ExpenseClassification("أخرى", true)
     }
 
-    // Fuel is checked before food because "بن" is also part of "بنزين".
-    if (hasAnyPhrase(text, listOf(
-            "بنزين", "سولار", "وقود", "زيت محرك", "زيت موتور", "زيت"
-        ))) {
-        return ExpenseClassification("وقود وزيوت", false)
+    // Fuel only: oils are not fuel expenses.
+    if (hasAnyPhrase(text, listOf("بنزين", "سولار", "وقود"))) {
+        return ExpenseClassification("وقود", false)
     }
+
 
     if (hasAnyPhrase(text, listOf(
             "فطار", "غداء", "عشاء", "قهوة", "قهوه", "شاي", "بن", "نص بن",
@@ -73,7 +72,8 @@ internal fun classifyExpense(description: String): ExpenseClassification {
             "كهرباء السياره", "زجاج السيارة", "زجاج السياره", "زجاج أمامي",
             "زجاج امامي", "غسيل السيارة", "غسيل السياره", "لمبة ليد للسيارة",
             "لمبه ليد للسياره", "كوتش كبلان", "مصنعية عفشة",
-            "مصنعية مخرطة", "مصنعية فريزة"
+            "مصنعية مخرطة", "مصنعية فريزة", "زيت محرك", "زيت موتور",
+            "زيت فتيس", "زيت فرامل", "زيت باور", "زيت سيارات"
         ))) {
         return ExpenseClassification("صيانة ومصنعية", false)
     }
