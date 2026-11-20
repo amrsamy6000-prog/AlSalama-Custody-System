@@ -47,6 +47,7 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.02.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.material3:material3")
 
     // Firebase SDK versions are managed together by the Firebase BoM.
