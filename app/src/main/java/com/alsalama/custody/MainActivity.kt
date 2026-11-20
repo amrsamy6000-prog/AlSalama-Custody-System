@@ -375,6 +375,7 @@ private fun playSalamaSuccessSound() {
     }
 }
 
+@Composable
 private fun ExpenseQuickEntryScreen(
     account: LoginAccount,
     onProfessional: () -> Unit,
