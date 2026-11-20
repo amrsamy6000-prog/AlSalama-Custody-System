@@ -37,9 +37,7 @@ internal fun classifyExpense(description: String): ExpenseClassification {
     }
 
     // Keep explicitly ambiguous descriptions in Other until the manager reviews them.
-    if (hasAnyPhrase(text, listOf(
-            "مصروف السادات", "مصروفات السادات", "مصنعية محمد النمس"
-        ))) {
+    if (hasAnyPhrase(text, listOf("مصروف السادات", "مصروفات السادات", "مصنعية محمد النمس"))) {
         return ExpenseClassification("أخرى", true)
     }
 
@@ -48,7 +46,6 @@ internal fun classifyExpense(description: String): ExpenseClassification {
         return ExpenseClassification("وقود", false)
     }
 
-
     if (hasAnyPhrase(text, listOf(
             "فطار", "غداء", "عشاء", "قهوة", "قهوه", "شاي", "بن", "نص بن",
             "سندوتش", "سندوتشات", "بلح", "مشروبات"
@@ -56,12 +53,17 @@ internal fun classifyExpense(description: String): ExpenseClassification {
         return ExpenseClassification("مأكولات ومشروبات", false)
     }
 
-    // One combined category: people, equipment/material transport, freight and road charges.
+    // Road tolls, checkpoints and crossing fees have their own user-approved category.
     if (hasAnyPhrase(text, listOf(
-            "مواصلات", "انتقالات", "توك توك", "توك توك", "توكتوك", "توتوك",
-            "تروسيكل", "نولون", "نقل", "شحن", "تحميل", "مشوار", "كارتة",
-            "كرتة", "كارتات", "كرتات", "بوابة", "ميزان جيش", "مرور",
-            "رسوم دخول", "صحراوي", "طريق"
+            "كارتة", "كرتة", "كارتات", "كرتات", "بوابة", "ميزان جيش",
+            "مرور", "رسوم دخول", "صحراوي", "رسوم عبور", "كارت عبور"
+        ))) {
+        return ExpenseClassification("كارتات ورسوم عبور", false)
+    }
+
+    if (hasAnyPhrase(text, listOf(
+            "مواصلات", "انتقالات", "توك توك", "توكتوك", "توتوك",
+            "تروسيكل", "نولون", "نقل", "شحن", "تحميل", "مشوار"
         ))) {
         return ExpenseClassification("مواصلات وانتقالات", false)
     }
@@ -75,23 +77,17 @@ internal fun classifyExpense(description: String): ExpenseClassification {
             "مصنعية مخرطة", "مصنعية فريزة", "زيت محرك", "زيت موتور",
             "زيت فتيس", "زيت فرامل", "زيت باور", "زيت سيارات"
         ))) {
-        return ExpenseClassification("صيانة ومصنعية", false)
+        return ExpenseClassification("صيانة سيارات", false)
     }
 
     if (hasAnyPhrase(text, listOf(
             "خامة", "خامات", "ماسور", "جلب", "كاتينة", "كاتينه", "مسامير",
             "صواميل", "زرجينة", "زرجينه", "سيليكون", "سيلكون", "سوست",
             "شحم", "خوص", "قطع غيار", "مستلزمات تشغيل", "قلب الخلاط",
-            "صاج تيل", "يد استيم"
+            "صاج تيل", "يد استيم", "نظارة لحام", "نظارات لحام", "عدة",
+            "ادوات", "أدوات", "معدات سلامة", "منشار", "مفتاح"
         ))) {
-        return ExpenseClassification("خامات وقطع غيار ومستلزمات تشغيل", false)
-    }
-
-    if (hasAnyPhrase(text, listOf(
-            "نظارة لحام", "نظارات لحام", "عدة", "ادوات", "أدوات",
-            "معدات سلامة"
-        ))) {
-        return ExpenseClassification("أدوات وسلامة ومستلزمات عامة", false)
+        return ExpenseClassification("مستلزمات ورشة", false)
     }
 
     return ExpenseClassification("أخرى", true)
