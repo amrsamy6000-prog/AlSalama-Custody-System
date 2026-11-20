@@ -14,6 +14,10 @@ on:
       - 'gradle.properties'
       - '.github/workflows/android-build.yml'
 
+concurrency:
+  group: android-debug-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
