@@ -312,7 +312,6 @@ private fun TopBar(onSignOut: () -> Unit) {
     }
 }
 
-@Composable
 private fun playSalamaSuccessSound() {
     // Original in-app success chime: three soft, bright notes.
     // It is synthesized locally and does not use the phone's notification sounds.
@@ -385,6 +384,7 @@ private fun ExpenseQuickEntryScreen(
     var details by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
     var saveMessage by remember { mutableStateOf<String?>(null) }
+    var lastSuccessMessage by remember { mutableStateOf<String?>(null) }
     var isPendingSync by remember { mutableStateOf(false) }
     var saveFailed by remember { mutableStateOf(false) }
     var feedbackAnimationKey by remember { mutableStateOf(0) }
@@ -435,7 +435,13 @@ private fun ExpenseQuickEntryScreen(
                     val cleanAmount = amountValue
                     if (cleanDetails.isNotEmpty() && cleanAmount != null && cleanAmount > 0.0) {
                         isSaving = true
-                        saveMessage = "تمام، المصروف اتحفظ على جهازك وهيتبعت أول ما النت يرجع"
+                        val offlineMessages = listOf(
+                            "تمام، المصروف اتحفظ على جهازك وهيتبعت أول ما النت يرجع ☁️",
+                            "ولا يهمك.. حفظناه عندك، وأول ما النت يرجع هيتبعت تلقائيًا 📲",
+                            "المصروف في الأمان على جهازك.. والمزامنة أول ما الاتصال يرجع 🔄",
+                            "كله تمام! المصروف اتحفظ محليًا ومستني الإنترنت 🌥️"
+                        )
+                        saveMessage = offlineMessages.random()
                         isPendingSync = true
                         saveFailed = false
                         feedbackAnimationKey += 1
@@ -464,7 +470,19 @@ private fun ExpenseQuickEntryScreen(
                             .addOnSuccessListener {
                                 isPendingSync = false
                                 saveFailed = false
-                                saveMessage = "عاش! المصروف اتسجل بنجاح"
+                                val successMessages = listOf(
+                                    "عاش يا بطل! المصروف اتسجل بنجاح 👏",
+                                    "تمام كده.. شغل مظبوط ✅",
+                                    "تسلم إيدك.. العملية تمت بنجاح 🌟",
+                                    "واحدة كمان في السليم! 😎",
+                                    "كده تمام يا معلم.. المصروف اتسجل ❤️",
+                                    "برافو عليك! كل حاجة تمام 💪",
+                                    "المصروف اتسجل.. يومك إنجازات 🎯",
+                                    "فل الفل! العملية تمت بنجاح ✨"
+                                )
+                                val availableMessages = successMessages.filterNot { it == lastSuccessMessage }
+                                saveMessage = availableMessages.random()
+                                lastSuccessMessage = saveMessage
                                 feedbackAnimationKey += 1
                             }
                             .addOnFailureListener { error ->
