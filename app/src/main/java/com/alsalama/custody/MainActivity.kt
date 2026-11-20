@@ -327,12 +327,16 @@ private fun ExpenseQuickEntryScreen(
                     if (cleanDetails.isNotEmpty() && cleanAmount != null && cleanAmount > 0.0) {
                         isSaving = true
                         saveMessage = null
+                        val classification = classifyExpense(cleanDetails)
                         val expense = hashMapOf<String, Any>(
                             "description" to cleanDetails,
                             "amount" to cleanAmount,
                             "currency" to "EGP",
                             "employeeName" to account.displayName,
                             "employeeCode" to account.code,
+                            "category" to classification.category,
+                            "needsManagerReview" to classification.needsManagerReview,
+                            "reviewStatus" to if (classification.needsManagerReview) "pending" else "not_required",
                             "createdAt" to FieldValue.serverTimestamp(),
                             "status" to "active"
                         )
