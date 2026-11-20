@@ -14,7 +14,7 @@ class ExpenseCategorizerTest {
 
     @Test fun automotiveOilsBelongToCarMaintenanceNotFuel() {
         listOf("زيت محرك الفيرنا", "زيت موتور السيارة", "زيت فتيس شاهين").forEach {
-            assertEquals("صيانة ومصنعية", classifyExpense(it).category)
+            assertEquals("صيانة سيارات", classifyExpense(it).category)
         }
         val unclearOil = classifyExpense("شراء زيت")
         assertEquals("أخرى", unclearOil.category)
@@ -27,14 +27,17 @@ class ExpenseCategorizerTest {
         assertFalse(result.needsManagerReview)
     }
 
-    @Test fun allTransportAndFreightUseOneCategory() {
+    @Test fun transportAndRoadFeesUseTheirOwnApprovedCategories() {
         listOf(
             "توك توك من صهرجت إلى ميت أبو خالد",
             "تروسيكل لنقل قلب الخلاط إلى المخرطة",
-            "نولون مصطفى أبيار",
-            "كارتة بوابة مدينة بدر",
-            "ميزان جيش الفيوم"
+            "نولون مصطفى أبيار"
         ).forEach { assertEquals("مواصلات وانتقالات", classifyExpense(it).category) }
+        listOf(
+            "كارتة بوابة مدينة بدر",
+            "ميزان جيش الفيوم",
+            "رسوم دخول الريف الأوروبي"
+        ).forEach { assertEquals("كارتات ورسوم عبور", classifyExpense(it).category) }
     }
 
     @Test fun ambiguousSadatExpenseNeedsManagerReview() {
@@ -51,9 +54,9 @@ class ExpenseCategorizerTest {
 
     @Test fun foodAndMaintenanceExamplesAreRecognized() {
         assertEquals("مأكولات ومشروبات", classifyExpense("قهوة على الطريق").category)
-        assertEquals("صيانة ومصنعية", classifyExpense("خرط طنابير الفيرنا").category)
-        assertEquals("صيانة ومصنعية", classifyExpense("مصنعية مخرطة وفريزة").category)
-        assertEquals("خامات وقطع غيار ومستلزمات تشغيل", classifyExpense("مسامير وصواميل لمساحات الخلاط").category)
+        assertEquals("صيانة سيارات", classifyExpense("خرط طنابير الفيرنا").category)
+        assertEquals("صيانة سيارات", classifyExpense("مصنعية مخرطة وفريزة").category)
+        assertEquals("مستلزمات ورشة", classifyExpense("مسامير وصواميل لمساحات الخلاط").category)
     }
 
     @Test fun ambiguousDescriptionsStayInOtherForManagerReview() {
