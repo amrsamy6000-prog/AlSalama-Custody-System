@@ -435,7 +435,7 @@ private fun PersonExpensesScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 7.dp, vertical = 8.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("✓", fontSize = 38.sp, lineHeight = 39.sp, fontWeight = FontWeight.Black)
+                        Text("✓", fontSize = 21.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold)
                         Text(
                             "تصفية العهدة",
                             fontSize = 12.sp,
