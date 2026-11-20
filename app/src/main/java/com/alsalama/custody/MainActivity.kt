@@ -3,6 +3,7 @@ package com.alsalama.custody
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -101,49 +102,96 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
     var openedSection by remember(account.code) { mutableStateOf<String?>(null) }
+    var professionalMode by remember(account.code) { mutableStateOf(false) }
+    var selectedPerson by remember(account.code) { mutableStateOf<String?>(null) }
+    var showAllExpenses by remember(account.code) { mutableStateOf(false) }
+    var showSettlement by remember(account.code) { mutableStateOf(false) }
+
+    val isFinance = account.displayName == "سامي هنداوي"
+    val isExpenseUser = account.displayName == "عمرو سامي" ||
+        account.displayName == "عبدالله" || account.displayName == "أحمد حمدي"
+
+    // Android system Back navigates through the in-app screens.
+    androidx.activity.compose.BackHandler(
+        enabled = openedSection != null || selectedPerson != null || showSettlement || professionalMode
+    ) {
+        when {
+            showSettlement -> showSettlement = false
+            openedSection != null -> openedSection = null
+            selectedPerson != null -> {
+                selectedPerson = null
+                showAllExpenses = false
+            }
+            professionalMode -> professionalMode = false
+        }
+    }
+
+    if (showSettlement) {
+        SimplePlaceholderPage(
+            title = "تصفية عهدة ${selectedPerson.orEmpty()}",
+            description = "هنا هتظهر مراجعة العهدة وإجمالي التمويل والمصروف والمتبقي قبل اعتماد التصفية.",
+            onBack = { showSettlement = false }
+        )
+        return
+    }
 
     if (openedSection != null) {
+        SimplePlaceholderPage(
+            title = openedSection.orEmpty(),
+            description = "هنضيف وظائف القسم وبياناته الفعلية في المرحلة التالية، مع الحفاظ على سهولة الاستخدام.",
+            onBack = { openedSection = null }
+        )
+        return
+    }
+
+    if (isFinance) {
+        if (selectedPerson != null) {
+            PersonExpensesScreen(
+                person = selectedPerson.orEmpty(),
+                showAll = showAllExpenses,
+                onShowAll = { showAllExpenses = true },
+                onSettle = { showSettlement = true },
+                onBack = { selectedPerson = null; showAllExpenses = false },
+                onSignOut = onSignOut
+            )
+            return
+        }
         Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
             Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { openedSection = null }) {
-                        Text("رجوع", color = SalamaGreen, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text("مصنع السلامة", color = SalamaDark, fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.height(34.dp))
-                FactoryLogoMark()
-                Spacer(modifier = Modifier.height(22.dp))
-                Text(
-                    text = openedSection.orEmpty(),
-                    color = SalamaDark,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(18.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(22.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                TopBar(onSignOut)
+                Spacer(modifier = Modifier.height(28.dp))
+                Text("متابعة العُهد", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("اختار الاسم لمراجعة مصروفاته", color = MutedText, fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(24.dp))
+                listOf("عمرو", "عبدالله", "أحمد حسن", "أحمد حمدي").forEach { person ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp).clickable {
+                            selectedPerson = person
+                            showAllExpenses = false
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Text("القسم جاهز للبدء", color = SalamaGreen, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            "هنضيف وظائف القسم وبياناته الفعلية في المرحلة التالية، مع الحفاظ على سهولة الاستخدام.",
-                            color = MutedText,
-                            fontSize = 14.sp,
-                            lineHeight = 23.sp,
-                            textAlign = TextAlign.Center
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 25.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.size(50.dp).background(Color(0xFFE6F1EC), RoundedCornerShape(15.dp)),
+                                contentAlignment = Alignment.Center
+                            ) { Text("👤", fontSize = 24.sp) }
+                            Text(
+                                person,
+                                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                                color = SalamaDark, fontSize = 21.sp, fontWeight = FontWeight.Bold
+                            )
+                            Text("‹", color = SalamaGreen, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -151,24 +199,21 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
         return
     }
 
+    if (isExpenseUser && !professionalMode) {
+        ExpenseQuickEntryScreen(
+            account = account,
+            onProfessional = { professionalMode = true },
+            onSignOut = onSignOut
+        )
+        return
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("مصنع السلامة", color = SalamaDark, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text("إدارة العُهد والمصروفات", color = MutedText, fontSize = 12.sp)
-                }
-                TextButton(onClick = onSignOut) {
-                    Text("تغيير الحساب", color = SalamaGreen, fontWeight = FontWeight.Bold)
-                }
-            }
+            TopBar(onSignOut)
             Spacer(modifier = Modifier.height(24.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -182,59 +227,151 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("أهلاً بيك يا ${account.displayName}", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text(account.roleTitle, color = Color(0xFFD1E8DC), fontSize = 14.sp)
+                        Text(account.roleTitle, color = Color(0xFFD1E8DC), fontSize = 15.sp)
                     }
                     FactoryLogoMark()
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                "الأقسام المتاحة ليك",
-                modifier = Modifier.fillMaxWidth(),
-                color = SalamaDark,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Start
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+            Text("الوضع الاحترافي", modifier = Modifier.fillMaxWidth(), color = SalamaDark, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(14.dp))
             account.sections.forEachIndexed { index, section ->
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
-                        .clickable { openedSection = section },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 11.dp).clickable { openedSection = section },
                     shape = RoundedCornerShape(17.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 18.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier.size(38.dp).background(Color(0xFFE6F1EC), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("${index + 1}", color = SalamaGreen, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        }
-                        Text(
-                            section,
-                            modifier = Modifier.weight(1f).padding(horizontal = 13.dp),
-                            color = SalamaDark,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            lineHeight = 21.sp
-                        )
-                        Text("‹", color = SalamaGreen, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                        Text("${index + 1}", color = SalamaGreen, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(section, modifier = Modifier.weight(1f).padding(horizontal = 15.dp), color = SalamaDark, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text("‹", color = SalamaGreen, fontSize = 26.sp)
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                "اختار القسم اللي عايز تشتغل فيه.",
-                color = MutedText,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center
+            if (isExpenseUser) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(
+                    onClick = { professionalMode = false },
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
+                ) { Text("العودة لتسجيل المصروف", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TopBar(onSignOut: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("مصنع السلامة", color = SalamaDark, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("إدارة العُهد والمصروفات", color = MutedText, fontSize = 13.sp)
+        }
+        TextButton(onClick = onSignOut) {
+            Text("تغيير الحساب", color = SalamaGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+    }
+}
+
+@Composable
+private fun ExpenseQuickEntryScreen(
+    account: LoginAccount,
+    onProfessional: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    var amount by remember { mutableStateOf("") }
+    var details by remember { mutableStateOf("") }
+    Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
+        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+            TopBar(onSignOut)
+            Spacer(modifier = Modifier.height(30.dp))
+            Text("تسجيل مصروف", color = SalamaDark, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("حساب ${account.displayName}", color = MutedText, fontSize = 16.sp)
+            Spacer(modifier = Modifier.height(28.dp))
+            OutlinedTextField(
+                value = details, onValueChange = { details = it },
+                modifier = Modifier.fillMaxWidth(), minLines = 2,
+                label = { Text("بيان المصروف") }, placeholder = { Text("اكتب المصروف باختصار") },
+                shape = RoundedCornerShape(16.dp)
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = amount, onValueChange = { amount = it },
+                modifier = Modifier.fillMaxWidth(), singleLine = true,
+                label = { Text("المبلغ بالجنيه") }, placeholder = { Text("0.00") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                shape = RoundedCornerShape(16.dp)
+            )
+            Spacer(modifier = Modifier.height(22.dp))
+            Button(
+                onClick = { },
+                enabled = false,
+                modifier = Modifier.fillMaxWidth().height(60.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
+            ) { Text("تسجيل المصروف", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(onClick = onProfessional, modifier = Modifier.fillMaxWidth()) {
+                Text("⚙  الوضع الاحترافي – باقي الخصائص", color = SalamaGreen, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PersonExpensesScreen(
+    person: String,
+    showAll: Boolean,
+    onShowAll: () -> Unit,
+    onSettle: () -> Unit,
+    onBack: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
+        Column(modifier = Modifier.fillMaxSize().padding(18.dp)) {
+            TopBar(onSignOut)
             Spacer(modifier = Modifier.height(18.dp))
+            Text("مصروفات $person", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(if (showAll) "كل مصروفات العهدة الحالية" else "مصروفات اليوم", color = MutedText, fontSize = 16.sp)
+            Spacer(modifier = Modifier.height(20.dp))
+            Box(
+                modifier = Modifier.weight(1f).fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("لا توجد مصروفات لعرضها حاليًا", color = MutedText, fontSize = 17.sp, textAlign = TextAlign.Center)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = onSettle, modifier = Modifier.weight(1f).height(62.dp),
+                    shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
+                ) { Text("✓\nتصفية العهدة", fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 18.sp) }
+                Button(
+                    onClick = onShowAll, modifier = Modifier.weight(1f).height(62.dp),
+                    shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = SalamaDark)
+                ) { Text("☷\nعرض كل المصروفات", fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 18.sp) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SimplePlaceholderPage(title: String, description: String, onBack: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
+        Column(modifier = Modifier.fillMaxSize().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(title, color = SalamaDark, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(24.dp))
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Text(description, modifier = Modifier.padding(22.dp), color = MutedText, fontSize = 16.sp, lineHeight = 25.sp, textAlign = TextAlign.Center)
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(onClick = onBack) { Text("رجوع", color = SalamaGreen, fontSize = 16.sp) }
         }
     }
 }
