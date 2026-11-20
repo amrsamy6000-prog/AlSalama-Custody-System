@@ -1,6 +1,9 @@
 package com.alsalama.custody
 
 import android.os.Bundle
+import com.google.firebase.FirebaseNetworkException
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseTooManyRequestsException
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
@@ -31,6 +34,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +60,42 @@ private val SalamaDark = Color(0xFF153F35)
 private val PageBackground = Color(0xFFF2F6F4)
 private val MutedText = Color(0xFF718079)
 
+private data class LoginAccount(val email: String, val displayName: String)
+
+private val loginAccounts = listOf(
+    LoginAccount("amro.samy@alsalama-custody.com", "عمرو سامي"),
+    LoginAccount("samy.hendawy@alsalama-custody.com", "سامي هنداوي"),
+    LoginAccount("abdullah@alsalama-custody.com", "عبدالله"),
+    LoginAccount("ahmed.hamdy@alsalama-custody.com", "أحمد حمدي")
+)
+
+private fun tryLoginWithCode(
+    auth: FirebaseAuth,
+    code: String,
+    accountIndex: Int = 0,
+    onSuccess: (String) -> Unit,
+    onFailure: (String) -> Unit
+) {
+    if (accountIndex >= loginAccounts.size) {
+        onFailure("رمز الدخول غير صحيح. راجع الرمز وحاول مرة تانية.")
+        return
+    }
+
+    val account = loginAccounts[accountIndex]
+    auth.signInWithEmailAndPassword(account.email, code)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                onSuccess(account.displayName)
+            } else if (task.exception is FirebaseNetworkException) {
+                onFailure("مفيش اتصال بالإنترنت. اتأكد من الاتصال وحاول تاني.")
+            } else if (task.exception is FirebaseTooManyRequestsException) {
+                onFailure("محاولات كتير في وقت قصير. استنى شوية وحاول تاني.")
+            } else {
+                tryLoginWithCode(auth, code, accountIndex + 1, onSuccess, onFailure)
+            }
+        }
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +104,44 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     LoginScreen()
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SignedInScreen(displayName: String, onSignOut: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            FactoryLogoMark()
+            Spacer(modifier = Modifier.height(22.dp))
+            Text(
+                text = "أهلاً بيك يا $displayName",
+                color = SalamaDark,
+                fontSize = 23.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "تم تسجيل الدخول بنجاح، والجلسة محفوظة على الجهاز.",
+                color = MutedText,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onSignOut,
+                shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
+            ) {
+                Text("تسجيل الخروج")
             }
         }
     }
@@ -106,6 +184,25 @@ private fun FactoryLogoMark() {
 
 @Composable
 private fun LoginScreen() {
+    val auth = remember { FirebaseAuth.getInstance() }
+    var signedInName by remember { mutableStateOf<String?>(null) }
+    var isSigningIn by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val currentEmail = auth.currentUser?.email
+        signedInName = loginAccounts.firstOrNull { it.email == currentEmail }?.displayName
+    }
+
+    if (signedInName != null) {
+        SignedInScreen(
+            displayName = signedInName.orEmpty(),
+            onSignOut = {
+                auth.signOut()
+                signedInName = null
+            }
+        )
+        return
+    }
     var accessCode by remember { mutableStateOf("") }
     var showCode by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -213,10 +310,24 @@ private fun LoginScreen() {
                         Spacer(modifier = Modifier.height(17.dp))
                         Button(
                             onClick = {
-                                message = if (accessCode.isBlank()) {
-                                    "اكتب رمز الدخول الأول، وبعدها دوس دخول."
-                                } else {
-                                    "تسجيل الدخول هيتفعل بعد توصيل نظام التحقق الآمن."
+                                if (accessCode.isBlank()) {
+                                    message = "اكتب رمز الدخول الأول، وبعدها دوس دخول."
+                                } else if (!isSigningIn) {
+                                    isSigningIn = true
+                                    message = null
+                                    tryLoginWithCode(
+                                        auth = auth,
+                                        code = accessCode.trim(),
+                                        onSuccess = { displayName ->
+                                            isSigningIn = false
+                                            signedInName = displayName
+                                            accessCode = ""
+                                        },
+                                        onFailure = { error ->
+                                            isSigningIn = false
+                                            message = error
+                                        }
+                                    )
                                 }
                             },
                             modifier = Modifier
@@ -225,7 +336,11 @@ private fun LoginScreen() {
                             shape = RoundedCornerShape(15.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
                         ) {
-                            Text("دخول لحسابي", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                if (isSigningIn) "جاري التحقق..." else "دخول لحسابي",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                         if (message != null) {
                             Spacer(modifier = Modifier.height(13.dp))
