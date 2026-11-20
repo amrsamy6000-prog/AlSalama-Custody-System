@@ -316,9 +316,34 @@ private fun ExpenseQuickEntryScreen(
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
             ) { Text("تسجيل المصروف", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
-            Spacer(modifier = Modifier.height(18.dp))
-            TextButton(onClick = onProfessional, modifier = Modifier.fillMaxWidth()) {
-                Text("⚙  الوضع الاحترافي – باقي الخصائص", color = SalamaGreen, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(44.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onProfessional() },
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .background(Color(0xFFE7F1EC), RoundedCornerShape(15.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("⚙", color = SalamaGreen, fontSize = 29.sp)
+                    }
+                    Column(modifier = Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                        Text("الوضع الاحترافي", color = SalamaDark, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text("باقي الخصائص والإعدادات", color = MutedText, fontSize = 13.sp)
+                    }
+                    Text("‹", color = SalamaGreen, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
@@ -376,38 +401,49 @@ private fun PersonExpensesScreen(
             }
 
             // Keep the actions above Android's gesture/navigation area.
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 14.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)
+                    .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 14.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
-                    onClick = onSettle,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB7791F))
+                    onClick = onShowAll,
+                    modifier = Modifier.weight(1f).heightIn(min = 68.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SalamaDark),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 7.dp, vertical = 8.dp)
                 ) {
-                    Text(
-                        "✓  تصفية العهدة",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("☷", fontSize = 25.sp, lineHeight = 27.sp)
+                        Text(
+                            "عرض كل المصروفات",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 16.sp
+                        )
+                    }
                 }
                 Button(
-                    onClick = onShowAll,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SalamaDark)
+                    onClick = onSettle,
+                    modifier = Modifier.weight(1f).heightIn(min = 68.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB7791F)),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 7.dp, vertical = 8.dp)
                 ) {
-                    Text(
-                        "☷  عرض كل المصروفات",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("✓", fontSize = 38.sp, lineHeight = 39.sp, fontWeight = FontWeight.Black)
+                        Text(
+                            "تصفية العهدة",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 16.sp
+                        )
+                    }
                 }
             }
         }
