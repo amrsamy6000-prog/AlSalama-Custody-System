@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -108,6 +109,8 @@ private fun LoginScreen() {
     var accessCode by remember { mutableStateOf("") }
     var showCode by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    val uriHandler = LocalUriHandler.current
+    val whatsappUrl = "https://wa.me/201212663313"
 
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -258,7 +261,7 @@ private fun LoginScreen() {
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "اكتب الكود اللي استلمته من مسؤول التطبيق، وبعدها دوس على «دخول لحسابي». متشاركش الكود بتاعك مع أي حد.",
+                                text = "اكتب الكود اللي استلمته من عمرو هنداوي، وبعدها دوس على «دخول لحسابي». ومتعرّفش الكود بتاعك لأي حد.",
                                 color = Color(0xFF52675E),
                                 fontSize = 13.sp,
                                 lineHeight = 21.sp
@@ -269,11 +272,22 @@ private fun LoginScreen() {
 
                 Spacer(modifier = Modifier.height(18.dp))
                 Text(
-                    text = "نسيت رمز الدخول؟ كلم مسؤول التطبيق يساعدك.",
+                    text = "نسيت رمز الدخول بتاعك؟",
                     color = MutedText,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     textAlign = TextAlign.Center
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                TextButton(
+                    onClick = { uriHandler.openUri(whatsappUrl) }
+                ) {
+                    Text(
+                        text = "💬 كلم عمرو من هنا على واتساب",
+                        color = SalamaGreen,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "مصنع السلامة  •  نظام داخلي",
