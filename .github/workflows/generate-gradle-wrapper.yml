@@ -1,7 +1,11 @@
 name: Generate Gradle Wrapper
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - setup/android-app-foundation
+    paths:
+      - .github/workflows/generate-gradle-wrapper.yml
 
 permissions:
   contents: write
