@@ -3,6 +3,7 @@ package com.alsalama.custody
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,9 +15,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -47,8 +51,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val SalamaGreen = Color(0xFF176B55)
-private val SalamaDark = Color(0xFF173D35)
-private val PageBackground = Color(0xFFF5F7F6)
+private val SalamaDark = Color(0xFF153F35)
+private val PageBackground = Color(0xFFF2F6F4)
+private val MutedText = Color(0xFF718079)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,154 +69,218 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+private fun FactoryLogoMark() {
+    Box(
+        modifier = Modifier
+            .size(88.dp)
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(Color(0xFF21866A), Color(0xFF104C3E))
+                ),
+                shape = RoundedCornerShape(26.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.size(54.dp)) {
+            val w = size.width
+            val h = size.height
+            val white = Color.White
+            val stroke = 3.2.dp.toPx()
+            // Factory roof and chimney
+            drawLine(white, Offset(w * .12f, h * .43f), Offset(w * .43f, h * .20f), stroke)
+            drawLine(white, Offset(w * .43f, h * .20f), Offset(w * .68f, h * .40f), stroke)
+            drawLine(white, Offset(w * .68f, h * .40f), Offset(w * .88f, h * .27f), stroke)
+            drawLine(white, Offset(w * .88f, h * .27f), Offset(w * .88f, h * .82f), stroke)
+            drawLine(white, Offset(w * .12f, h * .43f), Offset(w * .12f, h * .82f), stroke)
+            drawLine(white, Offset(w * .12f, h * .82f), Offset(w * .88f, h * .82f), stroke)
+            drawLine(white, Offset(w * .72f, h * .30f), Offset(w * .72f, h * .08f), stroke)
+            // Factory windows and door
+            drawLine(white, Offset(w * .27f, h * .57f), Offset(w * .27f, h * .68f), stroke)
+            drawLine(white, Offset(w * .43f, h * .57f), Offset(w * .43f, h * .68f), stroke)
+            drawLine(white, Offset(w * .59f, h * .57f), Offset(w * .59f, h * .68f), stroke)
+            drawLine(white, Offset(w * .76f, h * .57f), Offset(w * .76f, h * .68f), stroke)
+        }
+    }
+}
+
+@Composable
 private fun LoginScreen() {
     var accessCode by remember { mutableStateOf("") }
     var showCode by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = PageBackground
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
+        Box(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
-                    .size(76.dp)
-                    .background(SalamaGreen, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "س",
-                    color = Color.White,
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-            Text(
-                text = "مصنع السلامة",
-                color = SalamaDark,
-                fontSize = 27.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "نظام العهد والمصروفات",
-                color = Color(0xFF687A74),
-                fontSize = 15.sp
-            )
-
-            Spacer(modifier = Modifier.height(34.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(22.dp),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Text(
-                        text = "تسجيل الدخول",
-                        color = SalamaDark,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "أدخل رمز الدخول المخصص لك للمتابعة",
-                        color = Color(0xFF718079),
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(22.dp))
-
-                    Text(
-                        text = "رمز الدخول",
-                        color = SalamaDark,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = accessCode,
-                        onValueChange = {
-                            accessCode = it
-                            message = null
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        placeholder = { Text("أدخل رمز الدخول") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        visualTransformation = if (showCode) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            TextButton(onClick = { showCode = !showCode }) {
-                                Text(if (showCode) "إخفاء" else "إظهار", color = SalamaGreen)
-                            }
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = SalamaGreen,
-                            cursorColor = SalamaGreen
+                    .fillMaxWidth()
+                    .height(230.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color(0xFFE1F0E9), PageBackground)
                         )
                     )
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 22.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(10.dp))
+                FactoryLogoMark()
+                Spacer(modifier = Modifier.height(15.dp))
+                Text(
+                    text = "مصنع السلامة",
+                    color = SalamaDark,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(modifier = Modifier.height(5.dp))
+                Text(
+                    text = "إدارة العُهد والمصروفات",
+                    color = SalamaGreen,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "كل حساباتك ومصروفاتك في مكان واحد",
+                    color = MutedText,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center
+                )
 
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Button(
-                        onClick = {
-                            message = if (accessCode.isBlank()) {
-                                "من فضلك أدخل رمز الدخول أولًا"
-                            } else {
-                                "سيتم تفعيل تسجيل الدخول بعد ربط نظام التحقق الآمن"
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(54.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(22.dp),
+                        horizontalAlignment = Alignment.Start
                     ) {
                         Text(
-                            text = "دخول",
-                            fontSize = 16.sp,
+                            text = "أهلاً بيك 👋",
+                            color = SalamaDark,
+                            fontSize = 23.sp,
                             fontWeight = FontWeight.Bold
                         )
-                    }
-
-                    if (message != null) {
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(7.dp))
                         Text(
-                            text = message.orEmpty(),
-                            color = Color(0xFF9A6A22),
-                            fontSize = 13.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
+                            text = "اكتب رمز الدخول بتاعك علشان تدخل على حسابك.",
+                            color = MutedText,
+                            fontSize = 14.sp
                         )
+                        Spacer(modifier = Modifier.height(22.dp))
+                        Text(
+                            text = "رمز الدخول",
+                            color = SalamaDark,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = accessCode,
+                            onValueChange = {
+                                accessCode = it
+                                message = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            placeholder = { Text("اكتب الرمز هنا") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            visualTransformation = if (showCode) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                TextButton(onClick = { showCode = !showCode }) {
+                                    Text(if (showCode) "إخفاء" else "إظهار", color = SalamaGreen)
+                                }
+                            },
+                            shape = RoundedCornerShape(15.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = SalamaGreen,
+                                unfocusedBorderColor = Color(0xFFD7E2DC),
+                                cursorColor = SalamaGreen
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(17.dp))
+                        Button(
+                            onClick = {
+                                message = if (accessCode.isBlank()) {
+                                    "اكتب رمز الدخول الأول، وبعدها دوس دخول."
+                                } else {
+                                    "تسجيل الدخول هيتفعل بعد توصيل نظام التحقق الآمن."
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(15.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
+                        ) {
+                            Text("دخول لحسابي", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                        if (message != null) {
+                            Spacer(modifier = Modifier.height(13.dp))
+                            Text(
+                                text = message.orEmpty(),
+                                color = Color(0xFF94651F),
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "يتم تحديد صلاحياتك تلقائيًا حسب حسابك",
-                color = Color(0xFF718079),
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "نظام داخلي لإدارة العهد والمصروفات",
-                color = Color(0xFF9AA7A2),
-                fontSize = 11.sp
-            )
+                Spacer(modifier = Modifier.height(18.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE6F1EC)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text("💡", fontSize = 21.sp)
+                        Column(modifier = Modifier.padding(start = 10.dp)) {
+                            Text(
+                                text = "تدخل إزاي؟",
+                                color = SalamaDark,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "اكتب الكود اللي استلمته من مسؤول التطبيق، وبعدها دوس على «دخول لحسابي». متشاركش الكود بتاعك مع أي حد.",
+                                color = Color(0xFF52675E),
+                                fontSize = 13.sp,
+                                lineHeight = 21.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+                Text(
+                    text = "نسيت رمز الدخول؟ كلم مسؤول التطبيق يساعدك.",
+                    color = MutedText,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "مصنع السلامة  •  نظام داخلي",
+                    color = Color(0xFF9AA9A2),
+                    fontSize = 11.sp
+                )
+            }
         }
     }
 }
