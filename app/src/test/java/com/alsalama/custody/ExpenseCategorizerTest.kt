@@ -24,7 +24,7 @@ class ExpenseCategorizerTest {
             "نولون مصطفى أبيار",
             "كارتة بوابة مدينة بدر",
             "ميزان جيش الفيوم"
-        ).forEach { assertEquals(it, "مواصلات وانتقالات", classifyExpense(it).category) }
+        ).forEach { assertEquals("مواصلات وانتقالات", classifyExpense(it).category) }
     }
 
     @Test fun ambiguousSadatExpenseNeedsManagerReview() {
