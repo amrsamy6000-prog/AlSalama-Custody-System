@@ -142,6 +142,7 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
     var selectedPerson by remember(account.code) { mutableStateOf<String?>(null) }
     var showAllExpenses by remember(account.code) { mutableStateOf(false) }
     var showSettlement by remember(account.code) { mutableStateOf(false) }
+    var showFunding by remember(account.code) { mutableStateOf(false) }
 
     val isFinance = account.displayName == "سامي هنداوي"
     val isExpenseUser = account.displayName == "عمرو سامي" ||
@@ -149,10 +150,11 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
 
     // Android system Back navigates through the in-app screens.
     androidx.activity.compose.BackHandler(
-        enabled = openedSection != null || selectedPerson != null || showSettlement || professionalMode
+        enabled = openedSection != null || selectedPerson != null || showSettlement || showFunding || professionalMode
     ) {
         when {
             showSettlement -> showSettlement = false
+            showFunding -> showFunding = false
             openedSection != null -> openedSection = null
             selectedPerson != null -> {
                 selectedPerson = null
@@ -181,6 +183,13 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
     }
 
     if (isFinance) {
+        if (showFunding) {
+            FundingEntryScreen(
+                createdBy = account.displayName,
+                onBack = { showFunding = false }
+            )
+            return
+        }
         if (selectedPerson != null) {
             PersonExpensesScreen(
                 person = selectedPerson.orEmpty(),
@@ -192,46 +201,16 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
             )
             return
         }
-        Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
-            Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TopBar(onSignOut)
-                Spacer(modifier = Modifier.height(28.dp))
-                Text("متابعة العُهد", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("اختار الاسم لمراجعة مصروفاته", color = MutedText, fontSize = 16.sp)
-                Spacer(modifier = Modifier.height(24.dp))
-                listOf("عمرو", "عبدالله", "أحمد حسن", "أحمد حمدي").forEach { person ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp).clickable {
-                            selectedPerson = person
-                            showAllExpenses = false
-                        },
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 25.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier.size(50.dp).background(Color(0xFFE6F1EC), RoundedCornerShape(15.dp)),
-                                contentAlignment = Alignment.Center
-                            ) { Text("👤", fontSize = 24.sp) }
-                            Text(
-                                person,
-                                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
-                                color = SalamaDark, fontSize = 21.sp, fontWeight = FontWeight.Bold
-                            )
-                            Text("‹", color = SalamaGreen, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
+        FinanceDashboardScreen(
+            onOpenPerson = { person ->
+                selectedPerson = person
+                showAllExpenses = false
+            },
+            onFundCustody = { showFunding = true },
+            onOpenSettlements = { openedSection = "التسويات وإغلاق العهد" },
+            onOpenReports = { openedSection = "التقارير المالية" },
+            onSignOut = onSignOut
+        )
         return
     }
 
