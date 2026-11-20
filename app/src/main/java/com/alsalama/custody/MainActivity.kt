@@ -33,6 +33,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -56,6 +57,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 private val SalamaGreen = Color(0xFF176B55)
 private val SalamaDark = Color(0xFF153F35)
@@ -399,6 +405,8 @@ private fun ExpenseQuickEntryScreen(
     }
 }
 
+private data class ExpenseRecord(val description: String, val amount: Double, val createdAt: Date?)
+
 @Composable
 private fun PersonExpensesScreen(
     person: String,
@@ -408,94 +416,128 @@ private fun PersonExpensesScreen(
     onBack: () -> Unit,
     onSignOut: () -> Unit
 ) {
+    var expenses by remember(person) { mutableStateOf<List<ExpenseRecord>>(emptyList()) }
+    var loading by remember(person) { mutableStateOf(true) }
+    var errorText by remember(person) { mutableStateOf<String?>(null) }
+
+    DisposableEffect(person) {
+        val names = if (person == "عمرو") listOf("عمرو سامي", "عمرو") else listOf(person)
+        val registration: ListenerRegistration = FirebaseFirestore.getInstance()
+            .collection("expenses")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    errorText = error.localizedMessage ?: "تعذر تحميل المصروفات"
+                    loading = false
+                } else if (snapshot != null) {
+                    expenses = snapshot.documents
+                        .filter { it.getString("employeeName") in names && it.getString("status") == "active" }
+                        .map { doc ->
+                            ExpenseRecord(
+                                doc.getString("description").orEmpty(),
+                                doc.getDouble("amount") ?: 0.0,
+                                doc.getTimestamp("createdAt")?.toDate()
+                            )
+                        }
+                        .sortedByDescending { it.createdAt ?: Date(0) }
+                    errorText = null
+                    loading = false
+                }
+            }
+        onDispose { registration.remove() }
+    }
+
+    val today = Calendar.getInstance()
+    val todayExpenses = expenses.filter { item ->
+        item.createdAt?.let { date ->
+            val c = Calendar.getInstance().apply { time = date }
+            c.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
+                c.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
+        } ?: false
+    }
+    val shown = if (showAll) expenses else todayExpenses
+    val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd - hh:mm a", Locale.getDefault()) }
+
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                modifier = Modifier.weight(1f).fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 18.dp, vertical = 12.dp)
             ) {
                 TopBar(onSignOut)
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "مصروفات $person",
-                    color = SalamaDark,
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("مصروفات $person", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
                 FinancialSummaryCard()
                 Spacer(modifier = Modifier.height(18.dp))
-                Text(
-                    if (showAll) "كل مصروفات العهدة الحالية" else "مصروفات اليوم",
-                    color = SalamaDark,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(if (showAll) "كل مصروفات العهدة الحالية" else "مصروفات اليوم",
+                    color = SalamaDark, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(12.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 190.dp)
-                        .background(Color.White, RoundedCornerShape(20.dp))
-                        .padding(20.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "لا توجد مصروفات لعرضها حاليًا",
-                        color = MutedText,
-                        fontSize = 17.sp,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 25.sp
-                    )
+
+                when {
+                    loading -> Box(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp)
+                            .background(Color.White, RoundedCornerShape(20.dp)).padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) { Text("جارٍ تحميل المصروفات...", color = MutedText) }
+                    errorText != null -> Box(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp)
+                            .background(Color.White, RoundedCornerShape(20.dp)).padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) { Text("تعذر تحميل المصروفات: $errorText", color = Color(0xFFB45309), textAlign = TextAlign.Center) }
+                    shown.isEmpty() -> Box(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp)
+                            .background(Color.White, RoundedCornerShape(20.dp)).padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(if (showAll) "لا توجد مصروفات مسجلة لهذه العهدة حتى الآن" else "لا توجد مصروفات مسجلة اليوم",
+                            color = MutedText, fontSize = 17.sp, textAlign = TextAlign.Center, lineHeight = 25.sp)
+                    }
+                    else -> Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                        shown.forEach { item ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                            ) {
+                                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                    Text(item.description, color = SalamaDark, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.height(7.dp))
+                                    Text(String.format(Locale.getDefault(), "%.2f جنيه", item.amount),
+                                        color = SalamaGreen, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                                    item.createdAt?.let { date ->
+                                        Spacer(modifier = Modifier.height(5.dp))
+                                        Text(dateFormat.format(date), color = MutedText, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-
-            // Keep the actions above Android's gesture/navigation area.
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
+                modifier = Modifier.fillMaxWidth().navigationBarsPadding()
                     .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 14.dp),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = onShowAll,
-                    modifier = Modifier.weight(1f).heightIn(min = 68.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SalamaDark),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 7.dp, vertical = 8.dp)
-                ) {
+                Button(onClick = onShowAll, modifier = Modifier.weight(1f).heightIn(min = 68.dp),
+                    shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = SalamaDark),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 7.dp, vertical = 8.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("☷", fontSize = 25.sp, lineHeight = 27.sp)
-                        Text(
-                            "عرض كل المصروفات",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 16.sp
-                        )
+                        Text("عرض كل المصروفات", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center, lineHeight = 16.sp)
                     }
                 }
-                Button(
-                    onClick = onSettle,
-                    modifier = Modifier.weight(1f).heightIn(min = 68.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB7791F)),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 7.dp, vertical = 8.dp)
-                ) {
+                Button(onClick = onSettle, modifier = Modifier.weight(1f).heightIn(min = 68.dp),
+                    shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB7791F)),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 7.dp, vertical = 8.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("✓", fontSize = 21.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold)
-                        Text(
-                            "تصفية العهدة",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 16.sp
-                        )
+                        Text("تصفية العهدة", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center, lineHeight = 16.sp)
                     }
                 }
             }
