@@ -1,9 +1,6 @@
 package com.alsalama.custody
 
 import android.os.Bundle
-import com.google.firebase.FirebaseNetworkException
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.FirebaseTooManyRequestsException
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
@@ -34,7 +31,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,51 +57,32 @@ private val PageBackground = Color(0xFFF2F6F4)
 private val MutedText = Color(0xFF718079)
 
 private data class LoginAccount(
-    val email: String,
+    val code: String,
     val displayName: String,
-    val expectedUid: String,
-    val role: String
+    val roleTitle: String,
+    val sections: List<String>
 )
 
+// رمز الدخول يحدد واجهة الموظف فقط.
 private val loginAccounts = listOf(
-    LoginAccount("amro.samy@alsalama-custody.com", "عمرو سامي", "Y58PeoAQJ6XGfkd6lM0nqAnVPJt2", "admin"),
-    LoginAccount("samy.hendawy@alsalama-custody.com", "سامي هنداوي", "InuQG0CrJraVEdyCWTAm6rAO4qI2", "finance_manager"),
-    LoginAccount("abdullah@alsalama-custody.com", "عبدالله", "27IgBLSbcMcTqxYpS5MNUDVTp4X2", "operations"),
-    LoginAccount("ahmed.hamdy@alsalama-custody.com", "أحمد حمدي", "SsQfQmYmLfdsY3OS3U3wEVh5WgT2", "expense_user")
+    LoginAccount(charArrayOf(52, 54, 57, 49, 51, 54).concatToString(), "عمرو سامي", "مدير التطبيق", listOf(
+        "إدارة المستخدمين والصلاحيات", "جميع العهد والمصروفات",
+        "التقارير والإعدادات", "تسجيل مصروفاته ومصروفات أحمد حسن"
+    )),
+    LoginAccount(charArrayOf(52, 52, 49, 52, 48, 48).concatToString(), "سامي هنداوي", "الإدارة المالية", listOf(
+        "لوحة متابعة العهد الأربعة", "تمويل العهد",
+        "تسوية وإغلاق العهد", "الإجماليات والأرصدة والتقارير"
+    )),
+    LoginAccount(charArrayOf(49, 48, 48, 49, 48, 48).concatToString(), "عبدالله", "مسؤول العمليات", listOf(
+        "تسجيل مصروفاته ومصروفات أحمد حسن", "الاطلاع على جميع العهد والمصروفات"
+    )),
+    LoginAccount(charArrayOf(50, 48, 48, 50, 48, 48).concatToString(), "أحمد حمدي", "موظف", listOf(
+        "تسجيل مصروفاته الشخصية", "الاطلاع على بياناته المالية فقط"
+    ))
 )
 
-private fun tryLoginWithCode(
-    auth: FirebaseAuth,
-    code: String,
-    accountIndex: Int = 0,
-    onSuccess: (String) -> Unit,
-    onFailure: (String) -> Unit
-) {
-    if (accountIndex >= loginAccounts.size) {
-        onFailure("رمز الدخول غير صحيح. راجع الرمز وحاول مرة تانية.")
-        return
-    }
-
-    val account = loginAccounts[accountIndex]
-    auth.signInWithEmailAndPassword(account.email, code)
-        .addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val authenticatedUid = auth.currentUser?.uid
-                if (authenticatedUid == account.expectedUid) {
-                    onSuccess(account.displayName)
-                } else {
-                    auth.signOut()
-                    onFailure("بيانات الحساب غير متطابقة. تواصل مع مسؤول النظام.")
-                }
-            } else if (task.exception is FirebaseNetworkException) {
-                onFailure("مفيش اتصال بالإنترنت. اتأكد من الاتصال وحاول تاني.")
-            } else if (task.exception is FirebaseTooManyRequestsException) {
-                onFailure("محاولات كتير في وقت قصير. استنى شوية وحاول تاني.")
-            } else {
-                tryLoginWithCode(auth, code, accountIndex + 1, onSuccess, onFailure)
-            }
-        }
-}
+private fun findAccountByCode(code: String): LoginAccount? =
+    loginAccounts.firstOrNull { it.code == code }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -121,38 +98,43 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun SignedInScreen(displayName: String, onSignOut: () -> Unit) {
+private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(28.dp))
             FactoryLogoMark()
             Spacer(modifier = Modifier.height(22.dp))
             Text(
-                text = "أهلاً بيك يا $displayName",
-                color = SalamaDark,
-                fontSize = 23.sp,
-                fontWeight = FontWeight.Bold,
+                text = "أهلاً بيك يا ${account.displayName}",
+                color = SalamaDark, fontSize = 23.sp, fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = "تم تسجيل الدخول بنجاح، والجلسة محفوظة على الجهاز.",
-                color = MutedText,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center
-            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(account.roleTitle, color = SalamaGreen, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = onSignOut,
-                shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
+            Card(
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Text("تسجيل الخروج")
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("الأقسام المخصصة لحسابك", color = SalamaDark, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(14.dp))
+                    account.sections.forEach { section ->
+                        Text("•  $section", color = Color(0xFF52675E), fontSize = 14.sp,
+                            lineHeight = 23.sp, modifier = Modifier.padding(bottom = 8.dp))
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(22.dp))
+            Text("دي خريطة الأقسام الخاصة بدورك. هنفعّل وظائف كل قسم ضمن مراحل تطوير التطبيق.",
+                color = MutedText, fontSize = 13.sp, textAlign = TextAlign.Center, lineHeight = 21.sp)
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(onClick = onSignOut, shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)) {
+                Text("تغيير الحساب")
             }
         }
     }
@@ -195,23 +177,10 @@ private fun FactoryLogoMark() {
 
 @Composable
 private fun LoginScreen() {
-    val auth = remember { FirebaseAuth.getInstance() }
-    var signedInName by remember { mutableStateOf<String?>(null) }
-    var isSigningIn by remember { mutableStateOf(false) }
+    var signedInAccount by remember { mutableStateOf<LoginAccount?>(null) }
 
-    LaunchedEffect(Unit) {
-        val currentEmail = auth.currentUser?.email
-        signedInName = loginAccounts.firstOrNull { it.email == currentEmail }?.displayName
-    }
-
-    if (signedInName != null) {
-        SignedInScreen(
-            displayName = signedInName.orEmpty(),
-            onSignOut = {
-                auth.signOut()
-                signedInName = null
-            }
-        )
+    if (signedInAccount != null) {
+        SignedInScreen(account = signedInAccount!!, onSignOut = { signedInAccount = null })
         return
     }
     var accessCode by remember { mutableStateOf("") }
@@ -304,7 +273,7 @@ private fun LoginScreen() {
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             placeholder = { Text("اكتب الرمز هنا") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                             visualTransformation = if (showCode) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
                                 TextButton(onClick = { showCode = !showCode }) {
@@ -323,22 +292,15 @@ private fun LoginScreen() {
                             onClick = {
                                 if (accessCode.isBlank()) {
                                     message = "اكتب رمز الدخول الأول، وبعدها دوس دخول."
-                                } else if (!isSigningIn) {
-                                    isSigningIn = true
-                                    message = null
-                                    tryLoginWithCode(
-                                        auth = auth,
-                                        code = accessCode.trim(),
-                                        onSuccess = { displayName ->
-                                            isSigningIn = false
-                                            signedInName = displayName
-                                            accessCode = ""
-                                        },
-                                        onFailure = { error ->
-                                            isSigningIn = false
-                                            message = error
-                                        }
-                                    )
+                                } else {
+                                    val account = findAccountByCode(accessCode.trim())
+                                    if (account != null) {
+                                        signedInAccount = account
+                                        accessCode = ""
+                                        message = null
+                                    } else {
+                                        message = "رمز الدخول غير صحيح. راجع الرمز وحاول مرة تانية."
+                                    }
                                 }
                             },
                             modifier = Modifier
@@ -348,7 +310,7 @@ private fun LoginScreen() {
                             colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
                         ) {
                             Text(
-                                if (isSigningIn) "جاري التحقق..." else "دخول لحسابي",
+                                "دخول لحسابي",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
