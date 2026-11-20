@@ -267,11 +267,11 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
 
 @Composable
 private fun TopBar(onSignOut: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text("مصنع السلامة", color = SalamaDark, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text("إدارة العُهد والمصروفات", color = MutedText, fontSize = 13.sp)
-        }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         TextButton(onClick = onSignOut) {
             Text("تغيير الحساب", color = SalamaGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
@@ -375,15 +375,16 @@ private fun PersonExpensesScreen(
                     fontSize = 25.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    if (showAll) "كل مصروفات العهدة الحالية" else "مصروفات اليوم",
-                    color = MutedText,
-                    fontSize = 16.sp
-                )
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 FinancialSummaryCard()
                 Spacer(modifier = Modifier.height(18.dp))
+                Text(
+                    if (showAll) "كل مصروفات العهدة الحالية" else "مصروفات اليوم",
+                    color = SalamaDark,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(12.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -500,16 +501,16 @@ private fun CompactFinancialValue(
         Text(
             label,
             color = SalamaDark,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             maxLines = 1
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(7.dp))
         Text(
             value,
             color = valueColor,
-            fontSize = 17.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.ExtraBold,
             textAlign = TextAlign.Center,
             maxLines = 1
