@@ -60,13 +60,18 @@ private val SalamaDark = Color(0xFF153F35)
 private val PageBackground = Color(0xFFF2F6F4)
 private val MutedText = Color(0xFF718079)
 
-private data class LoginAccount(val email: String, val displayName: String, val expectedUid: String)
+private data class LoginAccount(
+    val email: String,
+    val displayName: String,
+    val expectedUid: String,
+    val role: String
+)
 
 private val loginAccounts = listOf(
-    LoginAccount("amro.samy@alsalama-custody.com", "عمرو سامي", "Y58PeoAQJ6XGfkd6lM0nqAnVPJt2"),
-    LoginAccount("samy.hendawy@alsalama-custody.com", "سامي هنداوي", "InuQG0CrJraVEdyCWTAm6rAO4qI2"),
-    LoginAccount("abdullah@alsalama-custody.com", "عبدالله", "27IgBLSbcMcTqxYpS5MNUDVTp4X2"),
-    LoginAccount("ahmed.hamdy@alsalama-custody.com", "أحمد حمدي", "SsQfQmYmLfdsY3OS3U3wEVh5WgT2")
+    LoginAccount("amro.samy@alsalama-custody.com", "عمرو سامي", "Y58PeoAQJ6XGfkd6lM0nqAnVPJt2", "admin"),
+    LoginAccount("samy.hendawy@alsalama-custody.com", "سامي هنداوي", "InuQG0CrJraVEdyCWTAm6rAO4qI2", "finance_manager"),
+    LoginAccount("abdullah@alsalama-custody.com", "عبدالله", "27IgBLSbcMcTqxYpS5MNUDVTp4X2", "operations"),
+    LoginAccount("ahmed.hamdy@alsalama-custody.com", "أحمد حمدي", "SsQfQmYmLfdsY3OS3U3wEVh5WgT2", "expense_user")
 )
 
 private fun tryLoginWithCode(
