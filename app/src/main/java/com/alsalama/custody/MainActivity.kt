@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -285,7 +287,7 @@ private fun ExpenseQuickEntryScreen(
     var amount by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
-        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
             TopBar(onSignOut)
             Spacer(modifier = Modifier.height(30.dp))
             Text("تسجيل مصروف", color = SalamaDark, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
@@ -314,7 +316,7 @@ private fun ExpenseQuickEntryScreen(
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
             ) { Text("تسجيل المصروف", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(18.dp))
             TextButton(onClick = onProfessional, modifier = Modifier.fillMaxWidth()) {
                 Text("⚙  الوضع الاحترافي – باقي الخصائص", color = SalamaGreen, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
@@ -332,29 +334,81 @@ private fun PersonExpensesScreen(
     onSignOut: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
-        Column(modifier = Modifier.fillMaxSize().padding(18.dp)) {
-            TopBar(onSignOut)
-            Spacer(modifier = Modifier.height(18.dp))
-            Text("مصروفات $person", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(if (showAll) "كل مصروفات العهدة الحالية" else "مصروفات اليوم", color = MutedText, fontSize = 16.sp)
-            Spacer(modifier = Modifier.height(20.dp))
-            Box(
-                modifier = Modifier.weight(1f).fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(20.dp),
-                contentAlignment = Alignment.Center
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 18.dp, vertical = 12.dp)
             ) {
-                Text("لا توجد مصروفات لعرضها حاليًا", color = MutedText, fontSize = 17.sp, textAlign = TextAlign.Center)
+                TopBar(onSignOut)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "مصروفات $person",
+                    color = SalamaDark,
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    if (showAll) "كل مصروفات العهدة الحالية" else "مصروفات اليوم",
+                    color = MutedText,
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 190.dp)
+                        .background(Color.White, RoundedCornerShape(20.dp))
+                        .padding(20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "لا توجد مصروفات لعرضها حاليًا",
+                        color = MutedText,
+                        fontSize = 17.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 25.sp
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+
+            // Keep the actions above Android's gesture/navigation area.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 14.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)
+            ) {
                 Button(
-                    onClick = onSettle, modifier = Modifier.weight(1f).height(62.dp),
-                    shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
-                ) { Text("✓\nتصفية العهدة", fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 18.sp) }
+                    onClick = onSettle,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB7791F))
+                ) {
+                    Text(
+                        "✓  تصفية العهدة",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
                 Button(
-                    onClick = onShowAll, modifier = Modifier.weight(1f).height(62.dp),
-                    shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = SalamaDark)
-                ) { Text("☷\nعرض كل المصروفات", fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 18.sp) }
+                    onClick = onShowAll,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SalamaDark)
+                ) {
+                    Text(
+                        "☷  عرض كل المصروفات",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
@@ -363,14 +417,14 @@ private fun PersonExpensesScreen(
 @Composable
 private fun SimplePlaceholderPage(title: String, description: String, onBack: () -> Unit) {
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
-        Column(modifier = Modifier.fillMaxSize().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.height(18.dp))
             Text(title, color = SalamaDark, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(24.dp))
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Text(description, modifier = Modifier.padding(22.dp), color = MutedText, fontSize = 16.sp, lineHeight = 25.sp, textAlign = TextAlign.Center)
             }
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
             TextButton(onClick = onBack) { Text("رجوع", color = SalamaGreen, fontSize = 16.sp) }
         }
     }
