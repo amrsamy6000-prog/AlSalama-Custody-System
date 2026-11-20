@@ -36,8 +36,10 @@ internal fun classifyExpense(description: String): ExpenseClassification {
         return ExpenseClassification("إكراميات", false)
     }
 
-    // Explicitly keep this known ambiguous wording in Other until the manager reviews it.
-    if (hasAnyPhrase(text, listOf("مصروف السادات", "مصروفات السادات"))) {
+    // Keep explicitly ambiguous descriptions in Other until the manager reviews them.
+    if (hasAnyPhrase(text, listOf(
+            "مصروف السادات", "مصروفات السادات", "مصنعية محمد النمس"
+        ))) {
         return ExpenseClassification("أخرى", true)
     }
 
@@ -70,7 +72,8 @@ internal fun classifyExpense(description: String): ExpenseClassification {
             "مساعد", "عفشة", "عفشه", "ميكانيكي", "كهرباء السيارة",
             "كهرباء السياره", "زجاج السيارة", "زجاج السياره", "زجاج أمامي",
             "زجاج امامي", "غسيل السيارة", "غسيل السياره", "لمبة ليد للسيارة",
-            "لمبه ليد للسياره", "كوتش كبلان", "مصنعية عفشة", "مصنعية"
+            "لمبه ليد للسياره", "كوتش كبلان", "مصنعية عفشة",
+            "مصنعية مخرطة", "مصنعية فريزة"
         ))) {
         return ExpenseClassification("صيانة ومصنعية", false)
     }
@@ -86,7 +89,7 @@ internal fun classifyExpense(description: String): ExpenseClassification {
 
     if (hasAnyPhrase(text, listOf(
             "نظارة لحام", "نظارات لحام", "عدة", "ادوات", "أدوات",
-            "معدات سلامة", "منظفات", "منظفات الحمام"
+            "معدات سلامة"
         ))) {
         return ExpenseClassification("أدوات وسلامة ومستلزمات عامة", false)
     }
