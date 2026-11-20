@@ -7,8 +7,18 @@ import org.junit.Test
 
 class ExpenseCategorizerTest {
     @Test fun fuelMustNotBeMistakenForCoffeeBeans() {
-        assertEquals("وقود وزيوت", classifyExpense("بنزين رضا حمدي").category)
+        assertEquals("وقود", classifyExpense("بنزين رضا حمدي").category)
+        assertEquals("وقود", classifyExpense("سولار جامبو").category)
         assertEquals("مأكولات ومشروبات", classifyExpense("نص بن للمكتب").category)
+    }
+
+    @Test fun automotiveOilsBelongToCarMaintenanceNotFuel() {
+        listOf("زيت محرك الفيرنا", "زيت موتور السيارة", "زيت فتيس شاهين").forEach {
+            assertEquals("صيانة ومصنعية", classifyExpense(it).category)
+        }
+        val unclearOil = classifyExpense("شراء زيت")
+        assertEquals("أخرى", unclearOil.category)
+        assertTrue(unclearOil.needsManagerReview)
     }
 
     @Test fun smokeHasTheApprovedGratuitiesPriority() {
