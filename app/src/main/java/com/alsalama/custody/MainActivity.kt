@@ -58,6 +58,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -322,6 +323,7 @@ private fun ExpenseQuickEntryScreen(
     var feedbackAnimationKey by remember { mutableStateOf(0) }
     val feedbackScale = remember { Animatable(0.72f) }
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     LaunchedEffect(saveMessage) {
         if (saveMessage != null) {
             delay(10_000L)
@@ -361,6 +363,7 @@ private fun ExpenseQuickEntryScreen(
             Spacer(modifier = Modifier.height(22.dp))
             Button(
                 onClick = {
+                    keyboardController?.hide()
                     val cleanDetails = details.trim()
                     val cleanAmount = amountValue
                     if (cleanDetails.isNotEmpty() && cleanAmount != null && cleanAmount > 0.0) {
