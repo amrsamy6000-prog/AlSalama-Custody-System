@@ -346,6 +346,7 @@ private fun ExpenseQuickEntryScreen(
                             "needsManagerReview" to classification.needsManagerReview,
                             "reviewStatus" to if (classification.needsManagerReview) "pending" else "not_required",
                             "createdAt" to FieldValue.serverTimestamp(),
+                            "createdAtLocal" to Date(),
                             "status" to "active"
                         )
                         // A client-generated ID makes retries idempotent: the same expense
@@ -580,7 +581,7 @@ private fun PersonExpensesScreen(
         val names = if (person == "عمرو") listOf("عمرو سامي", "عمرو") else listOf(person)
         val registration: ListenerRegistration = FirebaseFirestore.getInstance()
             .collection("expenses")
-            .addSnapshotListener { snapshot, error ->
+            .addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE) { snapshot, error ->
                 if (error != null) {
                     errorText = error.localizedMessage ?: "تعذر تحميل المصروفات"
                     loading = false
@@ -594,7 +595,7 @@ private fun PersonExpensesScreen(
                                 amount = doc.getDouble("amount") ?: 0.0,
                                 category = doc.getString("category").orEmpty(),
                                 needsManagerReview = doc.getBoolean("needsManagerReview") ?: false,
-                                createdAt = doc.getTimestamp("createdAt")?.toDate(),
+                                createdAt = (doc.getTimestamp("createdAt") ?: doc.getTimestamp("createdAtLocal"))?.toDate(),
                                 pendingSync = doc.metadata.hasPendingWrites()
                             )
                         }
