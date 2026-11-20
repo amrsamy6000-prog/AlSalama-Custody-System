@@ -40,6 +40,9 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
+      - name: Run expense classification unit tests
+        run: ./gradlew --no-daemon testDebugUnitTest
+
       - name: Assemble debug APK
         run: ./gradlew --no-daemon assembleDebug
 
