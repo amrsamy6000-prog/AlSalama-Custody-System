@@ -3,7 +3,7 @@ package com.alsalama.custody
 import android.os.Bundle
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseTooManyRequestsException
+import com.google.firebase.FirebaseTooManyRequestsException
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
@@ -60,13 +60,13 @@ private val SalamaDark = Color(0xFF153F35)
 private val PageBackground = Color(0xFFF2F6F4)
 private val MutedText = Color(0xFF718079)
 
-private data class LoginAccount(val email: String, val displayName: String)
+private data class LoginAccount(val email: String, val displayName: String, val expectedUid: String)
 
 private val loginAccounts = listOf(
-    LoginAccount("amro.samy@alsalama-custody.com", "عمرو سامي"),
-    LoginAccount("samy.hendawy@alsalama-custody.com", "سامي هنداوي"),
-    LoginAccount("abdullah@alsalama-custody.com", "عبدالله"),
-    LoginAccount("ahmed.hamdy@alsalama-custody.com", "أحمد حمدي")
+    LoginAccount("amro.samy@alsalama-custody.com", "عمرو سامي", "Y58PeoAQJ6XGfkd6lM0nqAnVPJt2"),
+    LoginAccount("samy.hendawy@alsalama-custody.com", "سامي هنداوي", "InuQG0CrJraVEdyCWTAm6rAO4qI2"),
+    LoginAccount("abdullah@alsalama-custody.com", "عبدالله", "27IgBLSbcMcTqxYpS5MNUDVTp4X2"),
+    LoginAccount("ahmed.hamdy@alsalama-custody.com", "أحمد حمدي", "SsQfQmYmLfdsY3OS3U3wEVh5WgT2")
 )
 
 private fun tryLoginWithCode(
@@ -85,7 +85,13 @@ private fun tryLoginWithCode(
     auth.signInWithEmailAndPassword(account.email, code)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                onSuccess(account.displayName)
+                val authenticatedUid = auth.currentUser?.uid
+                if (authenticatedUid == account.expectedUid) {
+                    onSuccess(account.displayName)
+                } else {
+                    auth.signOut()
+                    onFailure("بيانات الحساب غير متطابقة. تواصل مع مسؤول النظام.")
+                }
             } else if (task.exception is FirebaseNetworkException) {
                 onFailure("مفيش اتصال بالإنترنت. اتأكد من الاتصال وحاول تاني.")
             } else if (task.exception is FirebaseTooManyRequestsException) {
