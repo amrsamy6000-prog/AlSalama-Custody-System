@@ -445,6 +445,7 @@ private fun expenseCategoryIcon(category: String): String = when (displayExpense
     "صيانة سيارات" -> "🚗"
     "مستلزمات ورشة" -> "🛠️"
     "كارتات ورسوم عبور" -> "🛣️"
+    "إكراميات" -> "💵"
     else -> "📌"
 }
 
