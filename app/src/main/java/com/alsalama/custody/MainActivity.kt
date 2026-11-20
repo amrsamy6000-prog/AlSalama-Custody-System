@@ -501,8 +501,8 @@ private fun CompactFinancialValue(
         Text(
             label,
             color = SalamaDark,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.ExtraBold,
             textAlign = TextAlign.Center,
             maxLines = 1
         )
@@ -510,7 +510,7 @@ private fun CompactFinancialValue(
         Text(
             value,
             color = valueColor,
-            fontSize = 22.sp,
+            fontSize = 28.sp,
             fontWeight = FontWeight.ExtraBold,
             textAlign = TextAlign.Center,
             maxLines = 1
