@@ -382,6 +382,16 @@ private fun PersonExpensesScreen(
                     fontSize = 16.sp
                 )
                 Spacer(modifier = Modifier.height(18.dp))
+                FinancialSummaryCard()
+                Spacer(modifier = Modifier.height(18.dp))
+                Text(
+                    "تفاصيل المصروفات",
+                    modifier = Modifier.fillMaxWidth(),
+                    color = SalamaDark,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(10.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -447,6 +457,71 @@ private fun PersonExpensesScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FinancialSummaryCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
+            Text(
+                "الملخص المالي",
+                color = SalamaDark,
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            FinancialSummaryRow("قيمة العهدة", "لم يُضف تمويل بعد")
+            Spacer(modifier = Modifier.height(12.dp))
+            FinancialSummaryRow("إجمالي المصروفات", "لا توجد سجلات بعد")
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFF1F5F3), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 13.dp, vertical = 14.dp)
+            ) {
+                Column {
+                    Text("المتبقي", color = MutedText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "سيظهر بعد إضافة التمويل وتسجيل المصروفات",
+                        color = SalamaDark,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 21.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FinancialSummaryRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            color = MutedText,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            value,
+            color = SalamaDark,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.End
+        )
     }
 }
 
