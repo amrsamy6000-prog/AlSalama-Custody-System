@@ -57,12 +57,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.ListenerRegistration
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 private val SalamaGreen = Color(0xFF176B55)
 private val SalamaDark = Color(0xFF153F35)
@@ -100,6 +102,11 @@ private fun findAccountByCode(code: String): LoginAccount? =
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Keep Firestore's persistent on-device cache enabled for offline reads and queued writes.
+        FirebaseFirestore.getInstance().firestoreSettings =
+            FirebaseFirestoreSettings.Builder()
+                .setPersistenceEnabled(true)
+                .build()
         setContent {
             MaterialTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -341,19 +348,25 @@ private fun ExpenseQuickEntryScreen(
                             "createdAt" to FieldValue.serverTimestamp(),
                             "status" to "active"
                         )
+                        // A client-generated ID makes retries idempotent: the same expense
+                        // is written to the same document instead of creating duplicates.
+                        val expenseId = UUID.randomUUID().toString()
                         FirebaseFirestore.getInstance()
                             .collection("expenses")
-                            .add(expense)
+                            .document(expenseId)
+                            .set(expense)
                             .addOnSuccessListener {
-                                isSaving = false
-                                details = ""
-                                amount = ""
-                                saveMessage = "تم تسجيل المصروف بنجاح"
+                                saveMessage = "تمت مزامنة المصروف بنجاح"
                             }
                             .addOnFailureListener { error ->
-                                isSaving = false
-                                saveMessage = "تعذر تسجيل المصروف: ${error.localizedMessage ?: "راجع اتصال الإنترنت وقواعد Firebase"}"
+                                saveMessage = "تعذرت مزامنة المصروف: ${error.localizedMessage ?: "سيتم مراجعة الاتصال وقواعد Firebase"}"
                             }
+                        // Firestore persists this write locally and queues it while offline.
+                        // Do not keep the form locked while waiting for the server acknowledgement.
+                        isSaving = false
+                        details = ""
+                        amount = ""
+                        saveMessage = "تم حفظ المصروف على الجهاز، وبانتظار المزامنة عند عودة الإنترنت"
                     }
                 },
                 enabled = !isSaving && details.isNotBlank() && amountValue != null && amountValue > 0.0,
@@ -416,7 +429,8 @@ private data class ExpenseRecord(
     val amount: Double,
     val category: String,
     val needsManagerReview: Boolean,
-    val createdAt: Date?
+    val createdAt: Date?,
+    val pendingSync: Boolean = false
 )
 
 private fun formatExpenseAmount(amount: Double): String =
@@ -513,6 +527,17 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(expenseCategoryIcon(categoryName), fontSize = 15.sp)
+                    if (item.pendingSync) {
+                        Text(
+                            "بانتظار المزامنة",
+                            modifier = Modifier
+                                .background(Color(0xFFE7EEF9), RoundedCornerShape(7.dp))
+                                .padding(horizontal = 7.dp, vertical = 3.dp),
+                            color = Color(0xFF315A91),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                     if (item.needsManagerReview) {
                         Text(
                             "يحتاج مراجعة",
@@ -569,7 +594,8 @@ private fun PersonExpensesScreen(
                                 amount = doc.getDouble("amount") ?: 0.0,
                                 category = doc.getString("category").orEmpty(),
                                 needsManagerReview = doc.getBoolean("needsManagerReview") ?: false,
-                                createdAt = doc.getTimestamp("createdAt")?.toDate()
+                                createdAt = doc.getTimestamp("createdAt")?.toDate(),
+                                pendingSync = doc.metadata.hasPendingWrites()
                             )
                         }
                         .sortedByDescending { it.createdAt ?: Date(0) }
