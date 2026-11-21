@@ -167,7 +167,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ResumeSplashOverlay(onFinished: () -> Unit) {
     val context = LocalContext.current
-    // Play the intro only when the phone is not in silent/vibrate mode.
+
+    // One short cinematic sound cue; respect silent mode and the user's media volume.
     DisposableEffect(context) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         var player: MediaPlayer? = null
@@ -186,58 +187,28 @@ private fun ResumeSplashOverlay(onFinished: () -> Unit) {
         }
     }
 
-    val alpha = remember { Animatable(0f) }
-    val scale = remember { Animatable(1.18f) }
-    val verticalShift = remember { Animatable(24f) }
-    var highlightedLogo by remember { mutableStateOf(-1) }
+    val reveal = remember { Animatable(0f) }
+    val zoom = remember { Animatable(1.04f) }
+    val fade = remember { Animatable(1f) }
 
     LaunchedEffect(Unit) {
-        // Strong cinematic reveal, a deliberate hold, then a clean fade to the live app.
-        kotlinx.coroutines.coroutineScope {
-            launch {
-                alpha.animateTo(
-                    1f,
-                    animationSpec = tween(
-                        durationMillis = 650,
-                        easing = androidx.compose.animation.core.LinearOutSlowInEasing
-                    )
-                )
-            }
-            launch {
-                scale.animateTo(
-                    1f,
-                    animationSpec = tween(
-                        durationMillis = 1450,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing
-                    )
-                )
-            }
-            launch {
-                verticalShift.animateTo(
-                    0f,
-                    animationSpec = tween(
-                        durationMillis = 1100,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing
-                    )
-                )
-            }
-            launch {
-                // Highlight the eight original partner-logo cards in sequence.
-                // This is a transparent overlay only: the source artwork is never edited.
-                for (index in 0 until 8) {
-                    highlightedLogo = index
-                    delay(280)
-                }
-                highlightedLogo = -1
-            }
-        }
-        delay(950)
-        alpha.animateTo(
-            0f,
+        // Reveal the original artwork, hold briefly, then make one decisive push-in.
+        reveal.animateTo(
+            1f,
+            animationSpec = tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+        )
+        delay(350)
+        zoom.animateTo(
+            3.65f,
             animationSpec = tween(
-                durationMillis = 650,
-                easing = androidx.compose.animation.core.FastOutLinearInEasing
+                durationMillis = 2050,
+                easing = androidx.compose.animation.core.CubicBezierEasing(0.18f, 0.72f, 0.18f, 1f)
             )
+        )
+        delay(120)
+        fade.animateTo(
+            0f,
+            animationSpec = tween(520, easing = androidx.compose.animation.core.FastOutLinearInEasing)
         )
         onFinished()
     }
@@ -245,60 +216,31 @@ private fun ResumeSplashOverlay(onFinished: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color(0xFF071D17))
     ) {
         Image(
             painter = painterResource(id = R.drawable.alsalama_resume_splash_2x),
-            contentDescription = "مصنع السلامة",
+            contentDescription = "مصنع السلامة - م/ سامي هنداوي",
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    this.alpha = alpha.value
-                    scaleX = scale.value
-                    scaleY = scale.value
-                    translationY = verticalShift.value * density
+                    alpha = fade.value * reveal.value
+                    scaleX = zoom.value
+                    scaleY = zoom.value
+                    // The image's upper-middle focal area is pushed forward as one image.
+                    // No individual logos are animated or overlaid.
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.38f)
                 }
         )
-        // Sequential soft-gold focus frames over the existing logos.
-        // No crop, recolor, redraw, or replacement of the original splash image.
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            if (highlightedLogo >= 0) {
-                val sourceWidth = 941f
-                val sourceHeight = 1672f
-                val fitScale = minOf(size.width / sourceWidth, size.height / sourceHeight)
-                val imageWidth = sourceWidth * fitScale
-                val imageHeight = sourceHeight * fitScale
-                val left = (size.width - imageWidth) / 2f
-                val top = (size.height - imageHeight) / 2f
-                val column = highlightedLogo % 4
-                val row = highlightedLogo / 4
-                val cardLeft = floatArrayOf(50f, 260f, 475f, 687f)[column]
-                val cardRight = floatArrayOf(242f, 455f, 668f, 880f)[column]
-                val cardTop = if (row == 0) 1165f else 1280f
-                val cardBottom = if (row == 0) 1272f else 1412f
-                val rect = androidx.compose.ui.geometry.Rect(
-                    left + cardLeft * fitScale,
-                    top + cardTop * fitScale,
-                    left + cardRight * fitScale,
-                    top + cardBottom * fitScale
-                )
-                drawRoundRect(
-                    color = Color(0xFFFFD98A).copy(alpha = 0.78f),
-                    topLeft = rect.topLeft,
-                    size = rect.size,
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f * fitScale),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.2f * fitScale)
-                )
-                drawRoundRect(
-                    color = Color(0xFF2B9B70).copy(alpha = 0.38f),
-                    topLeft = androidx.compose.ui.geometry.Offset(rect.left - 3f * fitScale, rect.top - 3f * fitScale),
-                    size = androidx.compose.ui.geometry.Size(rect.width + 6f * fitScale, rect.height + 6f * fitScale),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(19f * fitScale),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.6f * fitScale)
-                )
-            }
-        }
+        // A restrained dark cinematic veil makes the final zoom dissolve cleanly
+        // into the already-composed application screen beneath this overlay.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = (1f - reveal.value) * 0.18f }
+                .background(Color(0xFF071D17))
+        )
     }
 }
 
