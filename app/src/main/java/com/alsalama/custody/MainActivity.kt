@@ -9,7 +9,6 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.AudioManager
-import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
 import android.os.Bundle
@@ -168,23 +167,13 @@ class MainActivity : ComponentActivity() {
 private fun ResumeSplashOverlay(onFinished: () -> Unit) {
     val context = LocalContext.current
 
-    // One short cinematic sound cue; respect silent mode and the user's media volume.
+    // A short, modern cinematic cue synthesized locally; no bundled legacy audio file.
     DisposableEffect(context) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        var player: MediaPlayer? = null
         val canPlay = audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL &&
             audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) > 0
-        if (canPlay) {
-            player = MediaPlayer.create(context, R.raw.intro_sound)
-            player?.setOnCompletionListener { it.release() }
-            player?.start()
-        }
-        onDispose {
-            player?.let {
-                try { if (it.isPlaying) it.stop() } catch (_: IllegalStateException) { }
-                it.release()
-            }
-        }
+        if (canPlay) playSalamaIntroSound()
+        onDispose { }
     }
 
     val reveal = remember { Animatable(0f) }
@@ -450,6 +439,75 @@ private fun playSalamaSuccessSound() {
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
         .build()
 
+    val track = AudioTrack.Builder()
+        .setAudioAttributes(audioAttributes)
+        .setAudioFormat(audioFormat)
+        .setTransferMode(AudioTrack.MODE_STATIC)
+        .setBufferSizeInBytes(samples.size * 2)
+        .build()
+
+    try {
+        track.write(samples, 0, samples.size)
+        track.play()
+        Handler(Looper.getMainLooper()).postDelayed({
+            try {
+                if (track.playState == AudioTrack.PLAYSTATE_PLAYING) track.stop()
+            } catch (_: IllegalStateException) {
+            } finally {
+                track.release()
+            }
+        }, durationMs.toLong() + 180L)
+    } catch (_: Exception) {
+        track.release()
+    }
+}
+
+private fun playSalamaIntroSound() {
+    // Warm cinematic swell followed by three clear glass-like notes.
+    // Generated at runtime so the intro has no dependency on an old audio asset.
+    val sampleRate = 44_100
+    val durationMs = 1_850
+    val sampleCount = sampleRate * durationMs / 1_000
+    val samples = ShortArray(sampleCount)
+    val notes = listOf(
+        Triple(523.25, 0.34, 0.62),
+        Triple(659.25, 0.72, 0.60),
+        Triple(783.99, 1.08, 0.68)
+    )
+
+    for (i in samples.indices) {
+        val time = i.toDouble() / sampleRate
+        val swell = kotlin.math.exp(-((time - 0.42) / 0.34).let { it * it }) * 0.10
+        val low = kotlin.math.sin(2.0 * Math.PI * (110.0 + 34.0 * time) * time) *
+            (1.0 - time / 1.85).coerceIn(0.0, 1.0) * swell
+        var value = low
+        for ((frequency, start, length) in notes) {
+            val localTime = time - start
+            if (localTime >= 0.0 && localTime < length) {
+                val attack = (localTime / 0.035).coerceIn(0.0, 1.0)
+                val release = ((length - localTime) / 0.20).coerceIn(0.0, 1.0)
+                val envelope = attack * release
+                val fundamental = kotlin.math.sin(2.0 * Math.PI * frequency * localTime)
+                val second = 0.20 * kotlin.math.sin(2.0 * Math.PI * frequency * 2.0 * localTime)
+                val third = 0.07 * kotlin.math.sin(2.0 * Math.PI * frequency * 3.01 * localTime)
+                value += (fundamental + second + third) * envelope * 0.16
+            }
+        }
+        val fadeOut = ((durationMs / 1_000.0 - time) / 0.22).coerceIn(0.0, 1.0)
+        samples[i] = (value * fadeOut).coerceIn(-0.85, 0.85).let {
+            (it * Short.MAX_VALUE).toInt().toShort()
+        }
+    }
+
+    val audioFormat = AudioFormat.Builder()
+        .setSampleRate(sampleRate)
+        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+        .build()
+    val audioAttributes = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build()
     val track = AudioTrack.Builder()
         .setAudioAttributes(audioAttributes)
         .setAudioFormat(audioFormat)
