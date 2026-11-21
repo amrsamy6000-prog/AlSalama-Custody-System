@@ -8,6 +8,8 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.media.AudioManager
+import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
 import android.os.Bundle
@@ -164,6 +166,26 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun ResumeSplashOverlay(onFinished: () -> Unit) {
+    val context = LocalContext.current
+    // Play the intro only when the phone is not in silent/vibrate mode.
+    DisposableEffect(context) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        var player: MediaPlayer? = null
+        val canPlay = audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL &&
+            audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) > 0
+        if (canPlay) {
+            player = MediaPlayer.create(context, R.raw.intro_sound)
+            player?.setOnCompletionListener { it.release() }
+            player?.start()
+        }
+        onDispose {
+            player?.let {
+                try { if (it.isPlaying) it.stop() } catch (_: IllegalStateException) { }
+                it.release()
+            }
+        }
+    }
+
     val alpha = remember { Animatable(0f) }
     val scale = remember { Animatable(1.18f) }
     val verticalShift = remember { Animatable(24f) }
