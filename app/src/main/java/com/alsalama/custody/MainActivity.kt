@@ -1,5 +1,9 @@
 package com.alsalama.custody
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
