@@ -1153,27 +1153,6 @@ private fun SettlementReviewScreen(
     }
 }
 
-private data class ExpenseClassification(
-    val category: String,
-    val needsManagerReview: Boolean
-)
-
-private fun classifyExpense(description: String): ExpenseClassification {
-    val value = description.lowercase(Locale("ar"))
-    val category = when {
-        listOf("سولار", "بنزين", "زيت", "وقود").any { value.contains(it) } -> "وقود وزيوت"
-        listOf("صيانة", "تصليح", "إصلاح", "قطع غيار").any { value.contains(it) } -> "صيانة"
-        listOf("أكل", "طعام", "وجبة", "مشروبات").any { value.contains(it) } -> "إعاشة"
-        listOf("نقل", "مواصلات", "شحن", "تحميل").any { value.contains(it) } -> "نقل وشحن"
-        listOf("عدد", "خامات", "صاج", "حديد", "مستلزمات").any { value.contains(it) } -> "مستلزمات وخامات"
-        else -> "مصروفات متنوعة"
-    }
-    return ExpenseClassification(
-        category = category,
-        needsManagerReview = category == "مصروفات متنوعة" || description.trim().length > 140
-    )
-}
-
 private data class CustodyTotals(
     val person: String,
     val funded: Double,
