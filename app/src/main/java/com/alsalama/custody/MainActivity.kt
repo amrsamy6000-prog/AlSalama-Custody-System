@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -249,20 +250,39 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
     }
 
     if (showSettlement) {
-        SimplePlaceholderPage(
-            title = "تصفية عهدة ${selectedPerson.orEmpty()}",
-            description = "هنا هتظهر مراجعة العهدة وإجمالي التمويل والمصروف والمتبقي قبل اعتماد التصفية.",
-            onBack = { showSettlement = false }
+        SettlementReviewScreen(
+            person = selectedPerson.orEmpty(),
+            settledBy = account.displayName,
+            onBack = { showSettlement = false },
+            onSettled = {
+                showSettlement = false
+                selectedPerson = null
+                showAllExpenses = false
+            }
         )
         return
     }
 
     if (openedSection != null) {
-        SimplePlaceholderPage(
-            title = openedSection.orEmpty(),
-            description = "هنضيف وظائف القسم وبياناته الفعلية في المرحلة التالية، مع الحفاظ على سهولة الاستخدام.",
-            onBack = { openedSection = null }
-        )
+        if (isFinance && openedSection == "التقارير المالية") {
+            FinancialReportsScreen(onBack = { openedSection = null }, onSignOut = onSignOut)
+        } else if (isFinance && openedSection == "التسويات وإغلاق العهد") {
+            SettlementHubScreen(
+                onSelectPerson = { person ->
+                    selectedPerson = person
+                    showSettlement = true
+                    openedSection = null
+                },
+                onBack = { openedSection = null },
+                onSignOut = onSignOut
+            )
+        } else {
+            SimplePlaceholderPage(
+                title = openedSection.orEmpty(),
+                description = "هنضيف وظائف القسم وبياناته الفعلية في المرحلة التالية، مع الحفاظ على سهولة الاستخدام.",
+                onBack = { openedSection = null }
+            )
+        }
         return
     }
 
@@ -857,6 +877,235 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
     }
 }
 
+
+
+@Composable
+private fun FinancialReportsScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
+    val db = remember { FirebaseFirestore.getInstance() }
+    var funded by remember { mutableStateOf(0.0) }
+    var spent by remember { mutableStateOf(0.0) }
+    var fundingCount by remember { mutableStateOf(0) }
+    var expenseCount by remember { mutableStateOf(0) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    DisposableEffect(db) {
+        val fundingListener = db.collection("custody_funding")
+            .whereEqualTo("status", "active")
+            .addSnapshotListener { snapshot, exception ->
+                if (exception != null) error = exception.localizedMessage
+                else if (snapshot != null) {
+                    funded = snapshot.documents.sumOf { it.getDouble("amount") ?: 0.0 }
+                    fundingCount = snapshot.size()
+                }
+            }
+        val expenseListener = db.collection("expenses")
+            .whereEqualTo("status", "active")
+            .addSnapshotListener { snapshot, exception ->
+                if (exception != null) error = exception.localizedMessage
+                else if (snapshot != null) {
+                    spent = snapshot.documents.sumOf { it.getDouble("amount") ?: 0.0 }
+                    expenseCount = snapshot.size()
+                }
+            }
+        onDispose {
+            fundingListener.remove()
+            expenseListener.remove()
+        }
+    }
+
+    Surface(Modifier.fillMaxSize(), color = PageBackground) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
+            TopBar(onSignOut)
+            Text("التقارير المالية", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+            Text("ملخص مباشر للحركات النشطة المسجلة على النظام", color = MutedText, fontSize = 13.sp)
+            Spacer(Modifier.height(18.dp))
+            CompactFinancialValue("إجمالي التمويل", String.format(Locale.US, "%,.2f ج.م", funded),
+                Color(0xFFEAF0F7), Color(0xFF315A83), Modifier.fillMaxWidth())
+            Spacer(Modifier.height(9.dp))
+            CompactFinancialValue("إجمالي المصروفات", String.format(Locale.US, "%,.2f ج.م", spent),
+                Color(0xFFFFF2E5), Color(0xFFB66A20), Modifier.fillMaxWidth())
+            Spacer(Modifier.height(9.dp))
+            CompactFinancialValue("الرصيد الحالي", String.format(Locale.US, "%,.2f ج.م", funded - spent),
+                Color(0xFFE8F4EC), if (funded - spent < 0) Color(0xFFB42318) else Color(0xFF23734D),
+                Modifier.fillMaxWidth())
+            Spacer(Modifier.height(18.dp))
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.padding(17.dp)) {
+                    Text("عدد الحركات النشطة", color = SalamaDark, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("عمليات التمويل: $fundingCount", color = MutedText)
+                    Text("عمليات المصروفات: $expenseCount", color = MutedText)
+                }
+            }
+            if (error != null) {
+                Spacer(Modifier.height(10.dp))
+                Text("تعذر تحديث التقرير: " + error.orEmpty(), color = Color(0xFFB45309), fontSize = 13.sp)
+            }
+            Spacer(Modifier.height(20.dp))
+            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                Text("رجوع", color = SalamaGreen)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettlementHubScreen(
+    onSelectPerson: (String) -> Unit,
+    onBack: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    val people = listOf("عمرو سامي", "عبدالله", "أحمد حسن", "أحمد حمدي")
+    Surface(Modifier.fillMaxSize(), color = PageBackground) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
+            TopBar(onSignOut)
+            Text("التسويات وإغلاق العهد", color = SalamaDark, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+            Text("اختر العهدة لمراجعة أرقامها قبل الإغلاق", color = MutedText, fontSize = 14.sp)
+            Spacer(Modifier.height(18.dp))
+            people.forEach { person ->
+                Card(
+                    Modifier.fillMaxWidth().padding(bottom = 10.dp).clickable { onSelectPerson(person) },
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(person, color = SalamaDark, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.weight(1f))
+                        Text("مراجعة التسوية  ‹", color = SalamaGreen, fontSize = 13.sp)
+                    }
+                }
+            }
+            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                Text("رجوع", color = SalamaGreen)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettlementReviewScreen(
+    person: String,
+    settledBy: String,
+    onBack: () -> Unit,
+    onSettled: () -> Unit
+) {
+    val db = remember { FirebaseFirestore.getInstance() }
+    var fundingDocs by remember(person) { mutableStateOf<List<com.google.firebase.firestore.DocumentSnapshot>>(emptyList()) }
+    var expenseDocs by remember(person) { mutableStateOf<List<com.google.firebase.firestore.DocumentSnapshot>>(emptyList()) }
+    var confirming by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    val names = if (person == "عمرو سامي") listOf("عمرو سامي", "عمرو") else listOf(person)
+    val funded = fundingDocs.sumOf { it.getDouble("amount") ?: 0.0 }
+    val spent = expenseDocs.sumOf { it.getDouble("amount") ?: 0.0 }
+    val remaining = funded - spent
+
+    DisposableEffect(person) {
+        val fundingListener = db.collection("custody_funding")
+            .whereEqualTo("personName", person)
+            .whereEqualTo("status", "active")
+            .addSnapshotListener { snapshot, error ->
+                if (error == null && snapshot != null) fundingDocs = snapshot.documents
+                else if (error != null) message = error.localizedMessage
+            }
+        val expenseListener = db.collection("expenses")
+            .whereEqualTo("status", "active")
+            .addSnapshotListener { snapshot, error ->
+                if (error == null && snapshot != null) {
+                    expenseDocs = snapshot.documents.filter { it.getString("employeeName") in names }
+                } else if (error != null) message = error.localizedMessage
+            }
+        onDispose {
+            fundingListener.remove()
+            expenseListener.remove()
+        }
+    }
+
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { if (!saving) confirming = false },
+            title = { Text("تأكيد إغلاق العهدة") },
+            text = {
+                Text(
+                    "سيتم إغلاق " + fundingDocs.size + " عملية تمويل و" + expenseDocs.size +
+                        " عملية مصروف للعهدة: $person. المتبقي الحالي: " +
+                        String.format(Locale.US, "%,.2f ج.م", remaining) +
+                        ". لا يمكن اعتبار العملية قابلة للتراجع من داخل التطبيق."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !saving,
+                    onClick = {
+                        saving = true
+                        val batch = db.batch()
+                        fundingDocs.forEach { batch.update(it.reference, "status", "settled") }
+                        expenseDocs.forEach { batch.update(it.reference, "status", "settled") }
+                        val settlementRef = db.collection("custody_settlements").document()
+                        batch.set(settlementRef, hashMapOf<String, Any>(
+                            "personName" to person,
+                            "fundedAmount" to funded,
+                            "spentAmount" to spent,
+                            "remainingAmount" to remaining,
+                            "fundingCount" to fundingDocs.size,
+                            "expenseCount" to expenseDocs.size,
+                            "settledBy" to settledBy,
+                            "settledAt" to FieldValue.serverTimestamp(),
+                            "settledAtLocal" to Date(),
+                            "status" to "closed"
+                        ))
+                        batch.commit()
+                            .addOnSuccessListener {
+                                saving = false
+                                confirming = false
+                                onSettled()
+                            }
+                            .addOnFailureListener { exception ->
+                                saving = false
+                                message = "فشل إغلاق العهدة: " + (exception.localizedMessage ?: "خطأ غير معروف")
+                                confirming = false
+                            }
+                    }
+                ) { Text(if (saving) "جارٍ الإغلاق…" else "تأكيد الإغلاق", color = Color(0xFFB42318)) }
+            },
+            dismissButton = {
+                TextButton(enabled = !saving, onClick = { confirming = false }) { Text("إلغاء") }
+            }
+        )
+    }
+
+    Surface(Modifier.fillMaxSize(), color = PageBackground) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
+            Text("مراجعة تصفية العهدة", color = SalamaDark, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+            Text(person, color = MutedText, fontSize = 16.sp)
+            Spacer(Modifier.height(20.dp))
+            CompactFinancialValue("إجمالي التمويل", String.format(Locale.US, "%,.2f ج.م", funded),
+                Color(0xFFEAF0F7), Color(0xFF315A83), Modifier.fillMaxWidth())
+            Spacer(Modifier.height(9.dp))
+            CompactFinancialValue("إجمالي المصروفات", String.format(Locale.US, "%,.2f ج.م", spent),
+                Color(0xFFFFF2E5), Color(0xFFB66A20), Modifier.fillMaxWidth())
+            Spacer(Modifier.height(9.dp))
+            CompactFinancialValue("المتبقي", String.format(Locale.US, "%,.2f ج.م", remaining),
+                Color(0xFFE8F4EC), if (remaining < 0) Color(0xFFB42318) else Color(0xFF23734D),
+                Modifier.fillMaxWidth())
+            Spacer(Modifier.height(12.dp))
+            Text("عدد التمويلات: " + fundingDocs.size, color = MutedText)
+            Text("عدد المصروفات: " + expenseDocs.size, color = MutedText)
+            if (message != null) {
+                Spacer(Modifier.height(10.dp))
+                Text(message.orEmpty(), color = Color(0xFFB42318), fontSize = 13.sp)
+            }
+            Spacer(Modifier.height(20.dp))
+            Button(
+                onClick = { confirming = true },
+                enabled = !saving && (fundingDocs.isNotEmpty() || expenseDocs.isNotEmpty()),
+                modifier = Modifier.fillMaxWidth().height(55.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB7791F))
+            ) { Text("مراجعة الأرقام ثم إغلاق العهدة", fontWeight = FontWeight.Bold) }
+            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("رجوع دون إغلاق", color = SalamaGreen) }
+        }
+    }
+}
 
 private data class ExpenseClassification(
     val category: String,
