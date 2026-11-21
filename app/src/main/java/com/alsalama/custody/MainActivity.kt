@@ -89,7 +89,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 private val SalamaGreen = Color(0xFF176B55)
 private val SalamaDark = Color(0xFF153F35)
