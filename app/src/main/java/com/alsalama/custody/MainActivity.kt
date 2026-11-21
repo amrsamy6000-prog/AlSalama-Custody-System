@@ -857,6 +857,321 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
     }
 }
 
+
+private data class ExpenseClassification(
+    val category: String,
+    val needsManagerReview: Boolean
+)
+
+private fun classifyExpense(description: String): ExpenseClassification {
+    val value = description.lowercase(Locale("ar"))
+    val category = when {
+        listOf("سولار", "بنزين", "زيت", "وقود").any { value.contains(it) } -> "وقود وزيوت"
+        listOf("صيانة", "تصليح", "إصلاح", "قطع غيار").any { value.contains(it) } -> "صيانة"
+        listOf("أكل", "طعام", "وجبة", "مشروبات").any { value.contains(it) } -> "إعاشة"
+        listOf("نقل", "مواصلات", "شحن", "تحميل").any { value.contains(it) } -> "نقل وشحن"
+        listOf("عدد", "خامات", "صاج", "حديد", "مستلزمات").any { value.contains(it) } -> "مستلزمات وخامات"
+        else -> "مصروفات متنوعة"
+    }
+    return ExpenseClassification(
+        category = category,
+        needsManagerReview = category == "مصروفات متنوعة" || description.trim().length > 140
+    )
+}
+
+private data class CustodyTotals(
+    val person: String,
+    val funded: Double,
+    val spent: Double
+) {
+    val remaining: Double get() = funded - spent
+}
+
+@Composable
+private fun FinanceDashboardScreen(
+    onOpenPerson: (String) -> Unit,
+    onOpenFinancialActions: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    val db = remember { FirebaseFirestore.getInstance() }
+    var fundingTotals by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
+    var expenseTotals by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
+    var loading by remember { mutableStateOf(true) }
+    var loadError by remember { mutableStateOf<String?>(null) }
+    val people = listOf("عمرو سامي", "عبدالله", "أحمد حسن", "أحمد حمدي")
+
+    DisposableEffect(db) {
+        val fundingListener = db.collection("custody_funding")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    loadError = error.localizedMessage ?: "تعذر تحميل التمويلات"
+                } else if (snapshot != null) {
+                    fundingTotals = snapshot.documents
+                        .filter { it.getString("status") == "active" }
+                        .groupBy { it.getString("personName").orEmpty() }
+                        .mapValues { entry -> entry.value.sumOf { it.getDouble("amount") ?: 0.0 } }
+                    loading = false
+                }
+            }
+        val expenseListener = db.collection("expenses")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    loadError = error.localizedMessage ?: "تعذر تحميل المصروفات"
+                } else if (snapshot != null) {
+                    expenseTotals = snapshot.documents
+                        .filter { it.getString("status") == "active" }
+                        .groupBy { it.getString("employeeName").orEmpty() }
+                        .mapValues { entry -> entry.value.sumOf { it.getDouble("amount") ?: 0.0 } }
+                    loading = false
+                }
+            }
+        onDispose {
+            fundingListener.remove()
+            expenseListener.remove()
+        }
+    }
+
+    Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 18.dp, vertical = 14.dp)
+        ) {
+            TopBar(onSignOut)
+            Spacer(Modifier.height(10.dp))
+            Text("الإدارة المالية", color = SalamaDark, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+            Text("متابعة العهد والتمويل والمصروفات", color = MutedText, fontSize = 14.sp)
+            Spacer(Modifier.height(18.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = SalamaDark)
+            ) {
+                Column(Modifier.padding(18.dp)) {
+                    Text("إجمالي العهد النشطة", color = Color(0xFFD7E9E0), fontSize = 14.sp)
+                    Spacer(Modifier.height(7.dp))
+                    Text(
+                        String.format(Locale.US, "%,.2f ج.م", fundingTotals.values.sum()),
+                        color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        "المصروفات النشطة: " + String.format(Locale.US, "%,.2f ج.م", expenseTotals.values.sum()),
+                        color = Color(0xFFD7E9E0), fontSize = 13.sp
+                    )
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("العهد الأربع", color = SalamaDark, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                if (loading) Text("جارٍ التحديث…", color = MutedText, fontSize = 12.sp)
+            }
+            if (loadError != null) {
+                Spacer(Modifier.height(8.dp))
+                Text("تعذر تحديث بعض البيانات: " + loadError.orEmpty(), color = Color(0xFFB45309), fontSize = 13.sp)
+            }
+            people.forEach { person ->
+                val totals = CustodyTotals(
+                    person,
+                    fundingTotals[person] ?: 0.0,
+                    expenseTotals[person] ?: 0.0
+                )
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+                        .clickable { onOpenPerson(person) },
+                    shape = RoundedCornerShape(17.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(15.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(person, color = SalamaDark, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.weight(1f))
+                            Text("التفاصيل  ‹", color = SalamaGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+                            CompactFinancialValue(
+                                "التمويل", String.format(Locale.US, "%,.0f", totals.funded),
+                                Color(0xFFEAF0F7), Color(0xFF315A83), Modifier.weight(1f)
+                            )
+                            CompactFinancialValue(
+                                "المصروف", String.format(Locale.US, "%,.0f", totals.spent),
+                                Color(0xFFFFF2E5), Color(0xFFB66A20), Modifier.weight(1f)
+                            )
+                            CompactFinancialValue(
+                                "المتبقي", String.format(Locale.US, "%,.0f", totals.remaining),
+                                Color(0xFFE8F4EC), if (totals.remaining < 0) Color(0xFFB42318) else Color(0xFF23734D),
+                                Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+            Button(
+                onClick = onOpenFinancialActions,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
+            ) {
+                Text("التمويل والتسويات والتقارير", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun FinancialActionsScreen(
+    onFundCustody: () -> Unit,
+    onOpenSettlements: () -> Unit,
+    onOpenReports: () -> Unit,
+    onBack: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    Surface(Modifier.fillMaxSize(), color = PageBackground) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
+        ) {
+            TopBar(onSignOut)
+            Text("إدارة العهد المالية", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+            Text("اختر العملية المطلوبة", color = MutedText, fontSize = 14.sp)
+            Spacer(Modifier.height(22.dp))
+            val actions = listOf(
+                Triple("تمويل عهدة جديدة", "إضافة مبلغ إلى عهدة أحد العاملين", onFundCustody),
+                Triple("التسويات وإغلاق العهد", "مراجعة التمويل والمصروف والمتبقي قبل التسوية", onOpenSettlements),
+                Triple("التقارير المالية", "ملخص التمويلات والمصروفات والأرصدة", onOpenReports)
+            )
+            actions.forEach { action ->
+                Card(
+                    Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable { action.third() },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(Modifier.padding(18.dp)) {
+                        Text(action.first, color = SalamaDark, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(5.dp))
+                        Text(action.second, color = MutedText, fontSize = 13.sp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                Text("رجوع للوحة الإدارة", color = SalamaGreen)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FundingEntryScreen(
+    createdBy: String,
+    onBack: () -> Unit
+) {
+    val db = remember { FirebaseFirestore.getInstance() }
+    val people = listOf("عمرو سامي", "عبدالله", "أحمد حسن", "أحمد حمدي")
+    var selectedPerson by remember { mutableStateOf<String?>(null) }
+    var amount by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+    var saving by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    val amountValue = amount.trim().replace(',', '.').toDoubleOrNull()
+
+    Surface(Modifier.fillMaxSize(), color = PageBackground) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
+        ) {
+            Text("تمويل عهدة", color = SalamaDark, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+            Text("تسجيل مبلغ جديد مع الاحتفاظ بسجل التمويلات", color = MutedText, fontSize = 14.sp)
+            Spacer(Modifier.height(22.dp))
+            Text("صاحب العهدة", color = SalamaDark, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            people.forEach { person ->
+                val selected = selectedPerson == person
+                TextButton(
+                    onClick = { selectedPerson = person; message = null },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                        contentColor = if (selected) Color.White else SalamaGreen,
+                        containerColor = if (selected) SalamaGreen else Color.White
+                    )
+                ) {
+                    Text(if (selected) "✓  " + person else person, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(5.dp))
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = amount,
+                onValueChange = { amount = it; message = null },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("مبلغ التمويل بالجنيه") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                shape = RoundedCornerShape(14.dp)
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = note,
+                onValueChange = { note = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("ملاحظات (اختياري)") },
+                minLines = 2,
+                shape = RoundedCornerShape(14.dp)
+            )
+            if (message != null) {
+                Spacer(Modifier.height(10.dp))
+                Text(message.orEmpty(), color = if (saving) MutedText else SalamaGreen, fontSize = 14.sp)
+            }
+            Spacer(Modifier.height(18.dp))
+            Button(
+                onClick = {
+                    val person = selectedPerson
+                    val value = amountValue
+                    if (person == null) {
+                        message = "اختار صاحب العهدة الأول."
+                    } else if (value == null || value <= 0.0) {
+                        message = "اكتب مبلغ تمويل صحيح أكبر من صفر."
+                    } else {
+                        saving = true
+                        message = "جارٍ حفظ التمويل…"
+                        val record = hashMapOf<String, Any>(
+                            "personName" to person,
+                            "amount" to value,
+                            "note" to note.trim(),
+                            "createdBy" to createdBy,
+                            "createdAt" to FieldValue.serverTimestamp(),
+                            "createdAtLocal" to Date(),
+                            "status" to "active"
+                        )
+                        db.collection("custody_funding").add(record)
+                            .addOnSuccessListener {
+                                saving = false
+                                amount = ""
+                                note = ""
+                                selectedPerson = null
+                                message = "تم تسجيل التمويل بنجاح."
+                            }
+                            .addOnFailureListener { error ->
+                                saving = false
+                                message = "تعذر حفظ التمويل: " + (error.localizedMessage ?: "راجع الاتصال والصلاحيات")
+                            }
+                    }
+                },
+                enabled = !saving,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
+            ) {
+                Text(if (saving) "جارٍ الحفظ…" else "حفظ التمويل", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                Text("رجوع", color = SalamaGreen)
+            }
+        }
+    }
+}
+
 @Composable
 private fun PersonExpensesScreen(
     person: String,
@@ -877,6 +1192,20 @@ private fun PersonExpensesScreen(
     var expenses by remember(person) { mutableStateOf<List<ExpenseRecord>>(emptyList()) }
     var loading by remember(person) { mutableStateOf(true) }
     var errorText by remember(person) { mutableStateOf<String?>(null) }
+    var fundedAmount by remember(person) { mutableStateOf(0.0) }
+
+    DisposableEffect(person) {
+        val fundingRegistration = FirebaseFirestore.getInstance()
+            .collection("custody_funding")
+            .whereEqualTo("personName", person)
+            .whereEqualTo("status", "active")
+            .addSnapshotListener { snapshot, error ->
+                if (error == null && snapshot != null) {
+                    fundedAmount = snapshot.documents.sumOf { it.getDouble("amount") ?: 0.0 }
+                }
+            }
+        onDispose { fundingRegistration.remove() }
+    }
 
     DisposableEffect(person) {
         val names = if (person == "عمرو") listOf("عمرو سامي", "عمرو") else listOf(person)
@@ -939,7 +1268,10 @@ private fun PersonExpensesScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("مصروفات $person", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
-                FinancialSummaryCard()
+                FinancialSummaryCard(
+                    fundedAmount = fundedAmount,
+                    spentAmount = expenses.sumOf { it.amount }
+                )
                 Spacer(modifier = Modifier.height(18.dp))
                 Text(if (showAll) "كل مصروفات العهدة الحالية" else "مصروفات اليوم",
                     color = SalamaDark, fontSize = 19.sp, fontWeight = FontWeight.Bold)
@@ -1030,7 +1362,8 @@ private fun PersonExpensesScreen(
 }
 
 @Composable
-private fun FinancialSummaryCard() {
+private fun FinancialSummaryCard(fundedAmount: Double, spentAmount: Double) {
+    val remaining = fundedAmount - spentAmount
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
@@ -1038,23 +1371,23 @@ private fun FinancialSummaryCard() {
     ) {
         CompactFinancialValue(
             label = "قيمة العهدة",
-            value = "—",
+            value = String.format(Locale.US, "%,.0f", fundedAmount),
             background = Color(0xFFEAF0F7),
             valueColor = Color(0xFF315A83),
             modifier = Modifier.weight(1f)
         )
         CompactFinancialValue(
             label = "المصروفات",
-            value = "—",
+            value = String.format(Locale.US, "%,.0f", spentAmount),
             background = Color(0xFFFFF2E5),
             valueColor = Color(0xFFB66A20),
             modifier = Modifier.weight(1f)
         )
         CompactFinancialValue(
             label = "المتبقي",
-            value = "—",
+            value = String.format(Locale.US, "%,.0f", remaining),
             background = Color(0xFFE8F4EC),
-            valueColor = Color(0xFF23734D),
+            valueColor = if (remaining < 0) Color(0xFFB42318) else Color(0xFF23734D),
             modifier = Modifier.weight(1f)
         )
     }
