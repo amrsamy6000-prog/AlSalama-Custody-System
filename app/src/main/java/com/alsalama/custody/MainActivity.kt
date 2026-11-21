@@ -189,6 +189,7 @@ private fun ResumeSplashOverlay(onFinished: () -> Unit) {
     val alpha = remember { Animatable(0f) }
     val scale = remember { Animatable(1.18f) }
     val verticalShift = remember { Animatable(24f) }
+    var highlightedLogo by remember { mutableStateOf(-1) }
 
     LaunchedEffect(Unit) {
         // Strong cinematic reveal, a deliberate hold, then a clean fade to the live app.
@@ -220,6 +221,15 @@ private fun ResumeSplashOverlay(onFinished: () -> Unit) {
                     )
                 )
             }
+            launch {
+                // Highlight the eight original partner-logo cards in sequence.
+                // This is a transparent overlay only: the source artwork is never edited.
+                for (index in 0 until 8) {
+                    highlightedLogo = index
+                    delay(280)
+                }
+                highlightedLogo = -1
+            }
         }
         delay(950)
         alpha.animateTo(
@@ -250,6 +260,45 @@ private fun ResumeSplashOverlay(onFinished: () -> Unit) {
                     translationY = verticalShift.value * density
                 }
         )
+        // Sequential soft-gold focus frames over the existing logos.
+        // No crop, recolor, redraw, or replacement of the original splash image.
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            if (highlightedLogo >= 0) {
+                val sourceWidth = 941f
+                val sourceHeight = 1672f
+                val fitScale = minOf(size.width / sourceWidth, size.height / sourceHeight)
+                val imageWidth = sourceWidth * fitScale
+                val imageHeight = sourceHeight * fitScale
+                val left = (size.width - imageWidth) / 2f
+                val top = (size.height - imageHeight) / 2f
+                val column = highlightedLogo % 4
+                val row = highlightedLogo / 4
+                val cardLeft = floatArrayOf(50f, 260f, 475f, 687f)[column]
+                val cardRight = floatArrayOf(242f, 455f, 668f, 880f)[column]
+                val cardTop = if (row == 0) 1165f else 1280f
+                val cardBottom = if (row == 0) 1272f else 1412f
+                val rect = androidx.compose.ui.geometry.Rect(
+                    left + cardLeft * fitScale,
+                    top + cardTop * fitScale,
+                    left + cardRight * fitScale,
+                    top + cardBottom * fitScale
+                )
+                drawRoundRect(
+                    color = Color(0xFFFFD98A).copy(alpha = 0.78f),
+                    topLeft = rect.topLeft,
+                    size = rect.size,
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f * fitScale),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.2f * fitScale)
+                )
+                drawRoundRect(
+                    color = Color(0xFF2B9B70).copy(alpha = 0.38f),
+                    topLeft = androidx.compose.ui.geometry.Offset(rect.left - 3f * fitScale, rect.top - 3f * fitScale),
+                    size = androidx.compose.ui.geometry.Size(rect.width + 6f * fitScale, rect.height + 6f * fitScale),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(19f * fitScale),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.6f * fitScale)
+                )
+            }
+        }
     }
 }
 
