@@ -124,18 +124,18 @@ private fun findAccountByCode(code: String): LoginAccount? =
     loginAccounts.firstOrNull { it.code == code }
 
 class MainActivity : ComponentActivity() {
-    private var hasGoneToBackground = false
     private var showResumeSplash by mutableStateOf(false)
 
     override fun onStart() {
         super.onStart()
-        // Show the approved image only when returning from the background, never on cold launch.
-        if (hasGoneToBackground) showResumeSplash = true
-    }
-
-    override fun onStop() {
-        hasGoneToBackground = true
-        super.onStop()
+        // Persist the date before showing: only the first foreground opening of each day qualifies.
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val preferences = getSharedPreferences("alsalama_daily_intro", MODE_PRIVATE)
+        val lastIntroDate = preferences.getString("last_intro_date", null)
+        if (lastIntroDate != today) {
+            preferences.edit().putString("last_intro_date", today).apply()
+            showResumeSplash = true
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -165,16 +165,17 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ResumeSplashOverlay(onFinished: () -> Unit) {
     val alpha = remember { Animatable(0f) }
-    val scale = remember { Animatable(1.045f) }
+    val scale = remember { Animatable(1.18f) }
+    val verticalShift = remember { Animatable(24f) }
 
     LaunchedEffect(Unit) {
-        // A single, unhurried sequence: fade in + gentle zoom, short hold, then fade out.
+        // Strong cinematic reveal, a deliberate hold, then a clean fade to the live app.
         kotlinx.coroutines.coroutineScope {
             launch {
                 alpha.animateTo(
                     1f,
                     animationSpec = tween(
-                        durationMillis = 700,
+                        durationMillis = 650,
                         easing = androidx.compose.animation.core.LinearOutSlowInEasing
                     )
                 )
@@ -183,17 +184,26 @@ private fun ResumeSplashOverlay(onFinished: () -> Unit) {
                 scale.animateTo(
                     1f,
                     animationSpec = tween(
-                        durationMillis = 1550,
+                        durationMillis = 1450,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                    )
+                )
+            }
+            launch {
+                verticalShift.animateTo(
+                    0f,
+                    animationSpec = tween(
+                        durationMillis = 1100,
                         easing = androidx.compose.animation.core.FastOutSlowInEasing
                     )
                 )
             }
         }
-        delay(550)
+        delay(950)
         alpha.animateTo(
             0f,
             animationSpec = tween(
-                durationMillis = 700,
+                durationMillis = 650,
                 easing = androidx.compose.animation.core.FastOutLinearInEasing
             )
         )
@@ -215,6 +225,7 @@ private fun ResumeSplashOverlay(onFinished: () -> Unit) {
                     this.alpha = alpha.value
                     scaleX = scale.value
                     scaleY = scale.value
+                    translationY = verticalShift.value * density
                 }
         )
     }
