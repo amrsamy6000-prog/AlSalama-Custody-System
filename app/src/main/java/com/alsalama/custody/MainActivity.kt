@@ -90,6 +90,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.delay
+import kotlin.math.sin
 
 private val SalamaGreen = Color(0xFF176B55)
 private val SalamaDark = Color(0xFF153F35)
@@ -227,6 +228,7 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
     var showSettlement by remember(account.code) { mutableStateOf(false) }
     var showFunding by remember(account.code) { mutableStateOf(false) }
     var showFinancialActions by remember(account.code) { mutableStateOf(false) }
+    var settlementFromHub by remember(account.code) { mutableStateOf(false) }
 
     val isFinance = account.displayName == "سامي هنداوي"
     val isExpenseUser = account.displayName == "عمرو سامي" ||
@@ -253,11 +255,24 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
         SettlementReviewScreen(
             person = selectedPerson.orEmpty(),
             settledBy = account.displayName,
-            onBack = { showSettlement = false },
+            onBack = {
+                showSettlement = false
+                if (settlementFromHub) {
+                    selectedPerson = null
+                    openedSection = "التسويات وإغلاق العهد"
+                    settlementFromHub = false
+                }
+            },
             onSettled = {
                 showSettlement = false
-                selectedPerson = null
-                showAllExpenses = false
+                if (settlementFromHub) {
+                    selectedPerson = null
+                    openedSection = "التسويات وإغلاق العهد"
+                    settlementFromHub = false
+                } else {
+                    selectedPerson = null
+                    showAllExpenses = false
+                }
             }
         )
         return
@@ -271,6 +286,7 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
                 onSelectPerson = { person ->
                     selectedPerson = person
                     showSettlement = true
+                    settlementFromHub = true
                     openedSection = null
                 },
                 onBack = { openedSection = null },
@@ -521,6 +537,7 @@ private fun ExpenseQuickEntryScreen(
 ) {
     var amount by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
+    var expenseFor by remember(account.code) { mutableStateOf(account.displayName) }
     var isSaving by remember { mutableStateOf(false) }
     var saveMessage by remember { mutableStateOf<String?>(null) }
     var lastSuccessMessage by remember { mutableStateOf<String?>(null) }
@@ -551,6 +568,27 @@ private fun ExpenseQuickEntryScreen(
             Text("تسجيل مصروف", color = SalamaDark, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
             Spacer(modifier = Modifier.height(6.dp))
             Text("حساب ${account.displayName}", color = MutedText, fontSize = 16.sp)
+            if (account.displayName == "عمرو سامي" || account.displayName == "عبدالله") {
+                Spacer(modifier = Modifier.height(14.dp))
+                Text("تسجيل المصروف باسم:", color = SalamaDark, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(account.displayName, "أحمد حسن").forEach { beneficiary ->
+                        TextButton(
+                            onClick = { expenseFor = beneficiary },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (expenseFor == beneficiary) Color.White else SalamaGreen,
+                                containerColor = if (expenseFor == beneficiary) SalamaGreen else Color.White
+                            )
+                        ) {
+                            Text(if (expenseFor == beneficiary) "✓  " + beneficiary else beneficiary)
+                        }
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(28.dp))
             OutlinedTextField(
                 value = details, onValueChange = { details = it },
@@ -590,8 +628,9 @@ private fun ExpenseQuickEntryScreen(
                             "description" to cleanDetails,
                             "amount" to cleanAmount,
                             "currency" to "EGP",
-                            "employeeName" to account.displayName,
+                            "employeeName" to expenseFor,
                             "employeeCode" to account.code,
+                            "enteredBy" to account.displayName,
                             "category" to classification.category,
                             "needsManagerReview" to classification.needsManagerReview,
                             "reviewStatus" to if (classification.needsManagerReview) "pending" else "not_required",
