@@ -583,10 +583,10 @@ private fun ExpenseQuickEntryScreen(
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
                 ) {
                     listOf(account.displayName, "أحمد حسن").forEach { beneficiary ->
-                        TextButton(
+                        Button(
                             onClick = { expenseFor = beneficiary },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.textButtonColors(
+                            colors = ButtonDefaults.buttonColors(
                                 contentColor = if (expenseFor == beneficiary) Color.White else SalamaGreen,
                                 containerColor = if (expenseFor == beneficiary) SalamaGreen else Color.White
                             )
@@ -1383,10 +1383,10 @@ private fun FundingEntryScreen(
             Spacer(Modifier.height(8.dp))
             people.forEach { person ->
                 val selected = selectedPerson == person
-                TextButton(
+                Button(
                     onClick = { selectedPerson = person; message = null },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    colors = ButtonDefaults.buttonColors(
                         contentColor = if (selected) Color.White else SalamaGreen,
                         containerColor = if (selected) SalamaGreen else Color.White
                     )
