@@ -1017,11 +1017,96 @@ private fun FactoryLogoMark() {
 }
 
 @Composable
+private fun AnimatedFactoryIntro(scene: Int) {
+    Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF7F2E9)) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(330.dp).background(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color(0xFFDCE6E9), Color(0xFFF7F2E9))
+                    )
+                )
+            )
+            AnimatedVisibility(
+                visible = scene == 0,
+                enter = fadeIn(animationSpec = tween(850)) + scaleIn(initialScale = 0.96f, animationSpec = tween(850)),
+                exit = androidx.compose.animation.fadeOut(animationSpec = tween(650))
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 42.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                ) {
+                    FactoryLogoMark()
+                    Spacer(Modifier.height(20.dp))
+                    Text("HENDAWY", color = SalamaDark, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("FEED EQUIPMENT", color = SalamaGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
+                    Spacer(Modifier.height(28.dp))
+                    Text("تصنيع وتطوير معدات الأعلاف", color = SalamaDark, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Text("حلول صناعية متكاملة", color = MutedText, fontSize = 13.sp)
+                }
+            }
+            AnimatedVisibility(
+                visible = scene == 1,
+                enter = fadeIn(animationSpec = tween(900)) + scaleIn(initialScale = 0.97f, animationSpec = tween(900)),
+                exit = androidx.compose.animation.fadeOut(animationSpec = tween(300))
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                ) {
+                    Box(
+                        modifier = Modifier.size(138.dp).background(
+                            brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                listOf(Color(0xFF21866A), Color(0xFF104C3E))
+                            ),
+                            shape = CircleShape
+                        ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        FactoryLogoMark()
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    Text("مصنع السلامة", color = Color(0xFFB78A4D), fontSize = 34.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(Modifier.height(7.dp))
+                    Text("لإنشاء وتطوير معدات تصنيع الأعلاف", color = SalamaDark, fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(10.dp))
+                    Text("م/ سامي هنداوي", color = SalamaDark, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(26.dp))
+                    Text("POWERED BY", color = MutedText, fontSize = 11.sp, letterSpacing = 4.sp)
+                    Spacer(Modifier.height(12.dp))
+                    Text("جهينة  •  بنك الطعام المصري  •  الريف  •  حاج عرفة", color = SalamaDark, fontSize = 11.sp, textAlign = TextAlign.Center)
+                    Text("مزارع دينا  •  مصر للأعلاف  •  النجوم للأعلاف  •  جيرمان فيد", color = SalamaDark, fontSize = 11.sp, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(24.dp))
+                    Text("Developed by Amr Samy", color = MutedText, fontSize = 11.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun LoginScreen() {
     val context = LocalContext.current
     val preferences = remember { context.getSharedPreferences("custody_app", Context.MODE_PRIVATE) }
+    var showIntro by remember { mutableStateOf(true) }
+    var introScene by remember { mutableStateOf(0) }
     var signedInAccount by remember {
         mutableStateOf(loginAccounts.firstOrNull { it.code == preferences.getString("selected_code", null) })
+    }
+
+    LaunchedEffect(Unit) {
+        introScene = 0
+        delay(2100)
+        introScene = 1
+        delay(1900)
+        showIntro = false
+    }
+
+    if (showIntro) {
+        AnimatedFactoryIntro(scene = introScene)
+        return
     }
 
     if (signedInAccount != null) {
