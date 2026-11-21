@@ -128,43 +128,26 @@ internal fun FinanceDashboardScreen(
                     Text("أهلاً يا سامي", color = FinanceDark, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
                     Text("الإدارة المالية", color = FinanceMuted, fontSize = 12.sp)
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                    TextButton(onClick = onOpenFinancialActions) {
-                        Text("الإجراءات المالية", color = FinanceGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                    TextButton(onClick = onSignOut) {
-                        Text("تغيير الحساب", color = FinanceMuted, fontSize = 11.sp)
-                    }
+                TextButton(onClick = onSignOut) {
+                    Text("تغيير الحساب", color = FinanceMuted, fontSize = 11.sp)
                 }
             }
 
             Spacer(Modifier.height(8.dp))
             Card(
-                Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(17.dp),
-                colors = CardDefaults.cardColors(containerColor = FinanceDark)
+                Modifier.fillMaxWidth().clickable(onClick = onOpenFinancialActions),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = FinanceDark),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
-                Column(Modifier.padding(horizontal = 12.dp, vertical = 11.dp)) {
-                    Text("ملخص حركة الأموال", color = Color(0xFFD7E9E0), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(9.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FinanceMetric("المصروفات", totalExpenses, Color(0xFFFFD5B7), Modifier.weight(1f))
+                Column(Modifier.padding(horizontal = 9.dp, vertical = 7.dp)) {
+                    Text("ملخص حركة الأموال", color = Color(0xFFD7E9E0), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(5.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         FinanceMetric("العهد", totalFunding, Color.White, Modifier.weight(1f))
+                        FinanceMetric("المصروفات", totalExpenses, Color(0xFFFFD5B7), Modifier.weight(1f))
                         FinanceMetric("المتبقي", remaining, Color(0xFFB7F0CB), Modifier.weight(1f))
                     }
-                    Spacer(Modifier.height(9.dp))
-                    LinearProgressIndicator(
-                        progress = { spentRatio },
-                        modifier = Modifier.fillMaxWidth().height(5.dp),
-                        color = Color(0xFFFFB47D),
-                        trackColor = Color(0xFF49685E)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        if (totalFunding > 0.0) "تم صرف " + financeMoney(spentRatio * 100.0) + "%"
-                        else "لم يتم تسجيل تمويل عهد حتى الآن",
-                        color = Color(0xFFD7E9E0), fontSize = 10.sp
-                    )
                 }
             }
 
@@ -228,11 +211,15 @@ internal fun FinancialActionsScreen(
 
 @Composable
 private fun FinanceMetric(label: String, amount: Double, valueColor: Color, modifier: Modifier) {
-    Column(modifier.background(Color(0x22FFFFFF), RoundedCornerShape(13.dp)).padding(horizontal = 8.dp, vertical = 11.dp)) {
-        Text(label, color = Color(0xFFD7E9E0), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-        Spacer(Modifier.height(5.dp))
-        Text(financeMoney(amount), color = valueColor, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-        Text("جنيه", color = Color(0xFFD7E9E0), fontSize = 10.sp)
+    Column(
+        modifier.background(Color(0x22FFFFFF), RoundedCornerShape(10.dp))
+            .padding(horizontal = 5.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(label, color = Color(0xFFD7E9E0), fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Spacer(Modifier.height(3.dp))
+        Text(financeMoney(amount), color = valueColor, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        Text("جنيه", color = Color(0xFFD7E9E0), fontSize = 9.sp)
     }
 }
 
