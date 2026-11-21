@@ -14,6 +14,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -57,6 +58,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -79,6 +83,8 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val SalamaGreen = Color(0xFF176B55)
 private val SalamaDark = Color(0xFF153F35)
@@ -114,6 +120,20 @@ private fun findAccountByCode(code: String): LoginAccount? =
     loginAccounts.firstOrNull { it.code == code }
 
 class MainActivity : ComponentActivity() {
+    private var hasGoneToBackground = false
+    private var showResumeSplash by mutableStateOf(false)
+
+    override fun onStart() {
+        super.onStart()
+        // Show the approved image only when returning from the background, never on cold launch.
+        if (hasGoneToBackground) showResumeSplash = true
+    }
+
+    override fun onStop() {
+        hasGoneToBackground = true
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Keep Firestore's persistent on-device cache enabled for offline reads and queued writes.
@@ -124,10 +144,52 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    LoginScreen()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Keep the existing screen composed underneath the temporary overlay,
+                        // preserving its navigation and input state while the app resumes.
+                        LoginScreen()
+                        if (showResumeSplash) {
+                            ResumeSplashOverlay(onFinished = { showResumeSplash = false })
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ResumeSplashOverlay(onFinished: () -> Unit) {
+    val alpha = remember { Animatable(0f) }
+    val scale = remember { Animatable(1.035f) }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.coroutineScope {
+            launch { alpha.animateTo(1f, animationSpec = tween(420)) }
+            launch { scale.animateTo(1f, animationSpec = tween(900)) }
+        }
+        delay(420)
+        alpha.animateTo(0f, animationSpec = tween(360))
+        onFinished()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.alsalama_resume_splash_2x),
+            contentDescription = "مصنع السلامة",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    this.alpha = alpha.value
+                    scaleX = scale.value
+                    scaleY = scale.value
+                }
+        )
     }
 }
 
