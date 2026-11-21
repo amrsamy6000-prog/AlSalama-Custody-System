@@ -65,9 +65,7 @@ private fun financeMoney(value: Double): String =
 @Composable
 internal fun FinanceDashboardScreen(
     onOpenPerson: (String) -> Unit,
-    onFundCustody: () -> Unit,
-    onOpenSettlements: () -> Unit,
-    onOpenReports: () -> Unit,
+    onOpenFinancialActions: () -> Unit,
     onSignOut: () -> Unit
 ) {
     var expenses by remember { mutableStateOf<List<FinanceExpense>>(emptyList()) }
@@ -117,73 +115,113 @@ internal fun FinanceDashboardScreen(
     val spentRatio = if (totalFunding > 0.0) (totalExpenses / totalFunding).coerceIn(0.0, 1.0).toFloat() else 0f
 
     Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF2F6F4)) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 18.dp, vertical = 12.dp)
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column {
-                    Text("لوحة سامي هنداوي", color = FinanceDark, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("متابعة حركة العهد والمصروفات", color = FinanceMuted, fontSize = 13.sp)
+                    Text("أهلاً يا سامي", color = FinanceDark, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("الإدارة المالية", color = FinanceMuted, fontSize = 12.sp)
                 }
-                TextButton(onClick = onSignOut) { Text("تغيير الحساب", color = FinanceGreen, fontWeight = FontWeight.Bold) }
+                Column(horizontalAlignment = Alignment.End) {
+                    TextButton(onClick = onOpenFinancialActions) {
+                        Text("الإجراءات المالية", color = FinanceGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                    TextButton(onClick = onSignOut) {
+                        Text("تغيير الحساب", color = FinanceMuted, fontSize = 11.sp)
+                    }
+                }
             }
-            Spacer(Modifier.height(14.dp))
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(23.dp), colors = CardDefaults.cardColors(containerColor = FinanceDark)) {
-                Column(Modifier.padding(17.dp)) {
-                    Text("ملخص حركة الأموال", color = Color(0xFFD7E9E0), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(14.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+            Spacer(Modifier.height(8.dp))
+            Card(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(17.dp),
+                colors = CardDefaults.cardColors(containerColor = FinanceDark)
+            ) {
+                Column(Modifier.padding(horizontal = 12.dp, vertical = 11.dp)) {
+                    Text("ملخص حركة الأموال", color = Color(0xFFD7E9E0), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(9.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         FinanceMetric("المصروفات", totalExpenses, Color(0xFFFFD5B7), Modifier.weight(1f))
                         FinanceMetric("العهد", totalFunding, Color.White, Modifier.weight(1f))
                         FinanceMetric("المتبقي", remaining, Color(0xFFB7F0CB), Modifier.weight(1f))
                     }
-                    Spacer(Modifier.height(15.dp))
+                    Spacer(Modifier.height(9.dp))
                     LinearProgressIndicator(
-                        progress = { spentRatio }, modifier = Modifier.fillMaxWidth().height(8.dp),
-                        color = Color(0xFFFFB47D), trackColor = Color(0xFF49685E)
+                        progress = { spentRatio },
+                        modifier = Modifier.fillMaxWidth().height(5.dp),
+                        color = Color(0xFFFFB47D),
+                        trackColor = Color(0xFF49685E)
                     )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        if (totalFunding > 0.0) "تم صرف " + financeMoney(spentRatio * 100.0) + "% من إجمالي العهد"
-                        else "سجل أول تمويل عهدة لبدء متابعة حركة الأموال",
-                        color = Color(0xFFD7E9E0), fontSize = 11.sp
+                        if (totalFunding > 0.0) "تم صرف " + financeMoney(spentRatio * 100.0) + "%"
+                        else "لم يتم تسجيل تمويل عهد حتى الآن",
+                        color = Color(0xFFD7E9E0), fontSize = 10.sp
                     )
                 }
             }
-            if (loading) { Spacer(Modifier.height(12.dp)); Text("جارٍ تحديث الأرقام من قاعدة البيانات...", color = FinanceMuted, fontSize = 12.sp) }
-            if (error != null) { Spacer(Modifier.height(10.dp)); Text("تعذر تحديث بعض البيانات: " + error, color = Color(0xFFB45309), fontSize = 12.sp) }
-            Spacer(Modifier.height(20.dp))
-            Text("العهد حسب الموظف", color = FinanceDark, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text("اضغط على اسم الموظف لمراجعة مصروفاته", color = FinanceMuted, fontSize = 12.sp)
-            Spacer(Modifier.height(10.dp))
+
+            if (loading) {
+                Spacer(Modifier.height(8.dp))
+                Text("جارٍ تحديث البيانات...", color = FinanceMuted, fontSize = 11.sp)
+            }
+            if (error != null) {
+                Spacer(Modifier.height(8.dp))
+                Text("تعذر تحديث بعض البيانات: " + error, color = Color(0xFFB45309), fontSize = 11.sp)
+            }
+
+            Spacer(Modifier.height(17.dp))
+            Text("الموظفون", color = FinanceDark, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(9.dp))
             FinancePeople.forEach { person ->
-                val aliases = financeEmployeeAliases(person)
-                val personFunding = movements.filter { it.type == "funding" && it.employeeName in aliases }.sumOf { it.amount }
-                val personReturns = movements.filter { it.type == "return" && it.employeeName in aliases }.sumOf { it.amount }
-                val personExpenses = expenses.filter { it.employeeName in aliases }.sumOf { it.amount }
-                val personRemaining = personFunding - personReturns - personExpenses
                 Card(
                     Modifier.fillMaxWidth().padding(bottom = 9.dp).clickable { onOpenPerson(person) },
-                    shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(15.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(person, color = FinanceDark, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Text("عهدة " + financeMoney(personFunding) + " ج  •  مصروف " + financeMoney(personExpenses) + " ج", color = FinanceMuted, fontSize = 11.sp)
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(financeMoney(personRemaining) + " ج", color = if (personRemaining < 0) Color(0xFFB42318) else FinanceGreen, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-                            Text("المتبقي", color = FinanceMuted, fontSize = 10.sp)
-                        }
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 17.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(person, modifier = Modifier.weight(1f), color = FinanceDark, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("‹", color = FinanceGreen, fontSize = 27.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
-            Spacer(Modifier.height(9.dp))
-            Text("الإجراءات المالية", color = FinanceDark, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(14.dp))
+        }
+    }
+}
+
+@Composable
+internal fun FinancialActionsScreen(
+    onFundCustody: () -> Unit,
+    onOpenSettlements: () -> Unit,
+    onOpenReports: () -> Unit,
+    onBack: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF2F6F4)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onBack) { Text("رجوع", color = FinanceGreen, fontWeight = FontWeight.Bold) }
+                TextButton(onClick = onSignOut) { Text("تغيير الحساب", color = FinanceMuted) }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text("الإجراءات المالية", color = FinanceDark, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+            Text("إدارة التمويل والتسويات والتقارير", color = FinanceMuted, fontSize = 13.sp)
+            Spacer(Modifier.height(22.dp))
             FinanceAction("＋", "تمويل عهدة", "تسجيل مبلغ جديد مع الموظف", onFundCustody)
-            FinanceAction("⇄", "التسويات وإغلاق العهد", "مراجعة المتبقي وترحيل أو رد الرصيد", onOpenSettlements)
-            FinanceAction("▤", "التقارير المالية", "ملخصات يومية وشهرية وسنوية", onOpenReports)
-            Spacer(Modifier.height(20.dp))
+            FinanceAction("⇄", "التسويات وإغلاق العهد", "مراجعة المتبقي ورد الأرصدة", onOpenSettlements)
+            FinanceAction("▤", "التقارير المالية", "التقارير اليومية والشهرية والسنوية", onOpenReports)
         }
     }
 }
