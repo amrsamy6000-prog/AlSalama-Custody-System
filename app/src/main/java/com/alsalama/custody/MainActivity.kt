@@ -239,7 +239,14 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
         enabled = openedSection != null || selectedPerson != null || showSettlement || showFunding || showFinancialActions || professionalMode
     ) {
         when {
-            showSettlement -> showSettlement = false
+            showSettlement -> {
+                showSettlement = false
+                if (settlementFromHub) {
+                    selectedPerson = null
+                    openedSection = "التسويات وإغلاق العهد"
+                    settlementFromHub = false
+                }
+            }
             showFunding -> showFunding = false
             showFinancialActions -> showFinancialActions = false
             openedSection != null -> openedSection = null
