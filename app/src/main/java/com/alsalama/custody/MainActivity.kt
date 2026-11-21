@@ -165,15 +165,38 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ResumeSplashOverlay(onFinished: () -> Unit) {
     val alpha = remember { Animatable(0f) }
-    val scale = remember { Animatable(1.035f) }
+    val scale = remember { Animatable(1.045f) }
 
     LaunchedEffect(Unit) {
+        // A single, unhurried sequence: fade in + gentle zoom, short hold, then fade out.
         kotlinx.coroutines.coroutineScope {
-            launch { alpha.animateTo(1f, animationSpec = tween(420)) }
-            launch { scale.animateTo(1f, animationSpec = tween(900)) }
+            launch {
+                alpha.animateTo(
+                    1f,
+                    animationSpec = tween(
+                        durationMillis = 700,
+                        easing = androidx.compose.animation.core.LinearOutSlowInEasing
+                    )
+                )
+            }
+            launch {
+                scale.animateTo(
+                    1f,
+                    animationSpec = tween(
+                        durationMillis = 1550,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                    )
+                )
+            }
         }
-        delay(420)
-        alpha.animateTo(0f, animationSpec = tween(360))
+        delay(550)
+        alpha.animateTo(
+            0f,
+            animationSpec = tween(
+                durationMillis = 700,
+                easing = androidx.compose.animation.core.FastOutLinearInEasing
+            )
+        )
         onFinished()
     }
 
