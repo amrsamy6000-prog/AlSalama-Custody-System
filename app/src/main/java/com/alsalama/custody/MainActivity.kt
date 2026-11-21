@@ -167,7 +167,7 @@ class MainActivity : ComponentActivity() {
 private fun ResumeSplashOverlay(onFinished: () -> Unit) {
     val context = LocalContext.current
 
-    // A short, modern cinematic cue synthesized locally; no bundled legacy audio file.
+    // Keep the original artwork untouched; only animate its opacity.
     DisposableEffect(context) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val canPlay = audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL &&
@@ -176,28 +176,24 @@ private fun ResumeSplashOverlay(onFinished: () -> Unit) {
         onDispose { }
     }
 
-    val reveal = remember { Animatable(0f) }
-    val zoom = remember { Animatable(1.04f) }
-    val fade = remember { Animatable(1f) }
+    val imageAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        // Reveal the original artwork, hold briefly, then make one decisive push-in.
-        reveal.animateTo(
+        imageAlpha.animateTo(
             1f,
-            animationSpec = tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-        )
-        delay(350)
-        zoom.animateTo(
-            3.65f,
             animationSpec = tween(
-                durationMillis = 2050,
-                easing = androidx.compose.animation.core.CubicBezierEasing(0.18f, 0.72f, 0.18f, 1f)
+                durationMillis = 650,
+                easing = androidx.compose.animation.core.FastOutSlowInEasing
             )
         )
-        delay(120)
-        fade.animateTo(
+        // Let the complete original artwork remain clearly visible.
+        delay(2_300)
+        imageAlpha.animateTo(
             0f,
-            animationSpec = tween(520, easing = androidx.compose.animation.core.FastOutLinearInEasing)
+            animationSpec = tween(
+                durationMillis = 600,
+                easing = androidx.compose.animation.core.FastOutLinearInEasing
+            )
         )
         onFinished()
     }
@@ -205,7 +201,8 @@ private fun ResumeSplashOverlay(onFinished: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF071D17))
+            .background(Color(0xFF071D17)),
+        contentAlignment = Alignment.Center
     ) {
         Image(
             painter = painterResource(id = R.drawable.alsalama_resume_splash_2x),
@@ -214,21 +211,9 @@ private fun ResumeSplashOverlay(onFinished: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    alpha = fade.value * reveal.value
-                    scaleX = zoom.value
-                    scaleY = zoom.value
-                    // The image's upper-middle focal area is pushed forward as one image.
-                    // No individual logos are animated or overlaid.
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.38f)
+                    // No zoom, crop, translation, or color changes: the source image stays intact.
+                    alpha = imageAlpha.value
                 }
-        )
-        // A restrained dark cinematic veil makes the final zoom dissolve cleanly
-        // into the already-composed application screen beneath this overlay.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = (1f - reveal.value) * 0.18f }
-                .background(Color(0xFF071D17))
         )
     }
 }
