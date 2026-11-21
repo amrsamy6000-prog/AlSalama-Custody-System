@@ -143,6 +143,7 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
     var showAllExpenses by remember(account.code) { mutableStateOf(false) }
     var showSettlement by remember(account.code) { mutableStateOf(false) }
     var showFunding by remember(account.code) { mutableStateOf(false) }
+    var showFinancialActions by remember(account.code) { mutableStateOf(false) }
 
     val isFinance = account.displayName == "سامي هنداوي"
     val isExpenseUser = account.displayName == "عمرو سامي" ||
@@ -150,11 +151,12 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
 
     // Android system Back navigates through the in-app screens.
     androidx.activity.compose.BackHandler(
-        enabled = openedSection != null || selectedPerson != null || showSettlement || showFunding || professionalMode
+        enabled = openedSection != null || selectedPerson != null || showSettlement || showFunding || showFinancialActions || professionalMode
     ) {
         when {
             showSettlement -> showSettlement = false
             showFunding -> showFunding = false
+            showFinancialActions -> showFinancialActions = false
             openedSection != null -> openedSection = null
             selectedPerson != null -> {
                 selectedPerson = null
@@ -183,6 +185,16 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
     }
 
     if (isFinance) {
+        if (showFinancialActions) {
+            FinancialActionsScreen(
+                onFundCustody = { showFinancialActions = false; showFunding = true },
+                onOpenSettlements = { showFinancialActions = false; openedSection = "التسويات وإغلاق العهد" },
+                onOpenReports = { showFinancialActions = false; openedSection = "التقارير المالية" },
+                onBack = { showFinancialActions = false },
+                onSignOut = onSignOut
+            )
+            return
+        }
         if (showFunding) {
             FundingEntryScreen(
                 createdBy = account.displayName,
@@ -206,9 +218,7 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
                 selectedPerson = person
                 showAllExpenses = false
             },
-            onFundCustody = { showFunding = true },
-            onOpenSettlements = { openedSection = "التسويات وإغلاق العهد" },
-            onOpenReports = { openedSection = "التقارير المالية" },
+            onOpenFinancialActions = { showFinancialActions = true },
             onSignOut = onSignOut
         )
         return
