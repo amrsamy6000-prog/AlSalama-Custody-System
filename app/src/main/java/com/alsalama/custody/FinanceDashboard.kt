@@ -20,7 +20,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -112,7 +111,6 @@ internal fun FinanceDashboardScreen(
     val totalReturns = movements.filter { it.type == "return" }.sumOf { it.amount }
     val totalExpenses = expenses.sumOf { it.amount }
     val remaining = totalFunding - totalExpenses - totalReturns
-    val spentRatio = if (totalFunding > 0.0) (totalExpenses / totalFunding).coerceIn(0.0, 1.0).toFloat() else 0f
 
     Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF2F6F4)) {
         Column(
