@@ -1033,6 +1033,20 @@ private fun PersonExpensesScreen(
                 }
 
                 if (selectedHistoryDate != null) {
+                    if (!loading && errorText == null && nextHistoryDate != null) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Button(
+                            onClick = { historyDates = historyDates + nextHistoryDate },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            shape = RoundedCornerShape(13.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFE7EFEB),
+                                contentColor = SalamaDark
+                            )
+                        ) {
+                            Text("◷  عرض اليوم الأقدم", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                     Spacer(modifier = Modifier.height(20.dp))
                     Button(
                         onClick = { historyDates = historyDates.dropLast(1) },
