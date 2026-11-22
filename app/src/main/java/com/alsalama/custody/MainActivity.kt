@@ -768,13 +768,13 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
     val categoryName = displayExpenseCategory(item.category)
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(17.dp),
+        shape = RoundedCornerShape(15.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isNew) Color(0xFFFFF2D9) else Color.White
+            containerColor = if (isNew) Color(0xFFF0F6F1) else Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isNew) 3.dp else 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(17.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 13.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -783,72 +783,76 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
                     item.description,
                     modifier = Modifier.weight(1f),
                     color = SalamaDark,
-                    fontSize = 19.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    lineHeight = 27.sp
+                    lineHeight = 29.sp
                 )
                 if (isNew) {
-                    Spacer(modifier = Modifier.size(8.dp))
+                    Spacer(modifier = Modifier.size(7.dp))
                     Text(
                         "جديد",
                         modifier = Modifier
-                            .background(Color(0xFFFFDFA3), RoundedCornerShape(9.dp))
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                        color = Color(0xFF8A4B08),
-                        fontSize = 12.sp,
+                            .background(Color(0xFFDDEBE1), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        color = Color(0xFF35634A),
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(9.dp))
+            Spacer(modifier = Modifier.height(5.dp))
             Text(
                 formatExpenseAmount(item.amount) + " جنيه",
                 color = SalamaGreen,
-                fontSize = 20.sp,
+                fontSize = 19.sp,
                 fontWeight = FontWeight.ExtraBold
             )
-            item.createdAt?.let { date ->
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(formatArabicDateTime(date), color = MutedText, fontSize = 12.sp)
-            }
-            Spacer(modifier = Modifier.height(9.dp))
-            Box(
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.CenterEnd
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(5.dp)
-                ) {
+                Text(expenseCategoryIcon(categoryName), fontSize = 21.sp)
+                Spacer(modifier = Modifier.size(7.dp))
+                Text(
+                    categoryName,
+                    color = Color(0xFF56665E),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                if (item.pendingSync) {
                     Text(
-                        categoryName,
-                        color = MutedText,
-                        fontSize = 13.sp,
+                        "بانتظار المزامنة",
+                        modifier = Modifier
+                            .background(Color(0xFFE7EEF9), RoundedCornerShape(7.dp))
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
+                        color = Color(0xFF315A91),
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold
                     )
-                    Text(expenseCategoryIcon(categoryName), fontSize = 15.sp)
-                    if (item.pendingSync) {
-                        Text(
-                            "بانتظار المزامنة",
-                            modifier = Modifier
-                                .background(Color(0xFFE7EEF9), RoundedCornerShape(7.dp))
-                                .padding(horizontal = 7.dp, vertical = 3.dp),
-                            color = Color(0xFF315A91),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    if (item.needsManagerReview) {
-                        Text(
-                            "يحتاج مراجعة",
-                            modifier = Modifier
-                                .background(Color(0xFFFFF1D8), RoundedCornerShape(7.dp))
-                                .padding(horizontal = 7.dp, vertical = 3.dp),
-                            color = Color(0xFF9A6718),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                }
+                if (item.needsManagerReview) {
+                    Spacer(modifier = Modifier.size(5.dp))
+                    Text(
+                        "يحتاج مراجعة",
+                        modifier = Modifier
+                            .background(Color(0xFFFFF1D8), RoundedCornerShape(7.dp))
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
+                        color = Color(0xFF9A6718),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                item.createdAt?.let { date ->
+                    Spacer(modifier = Modifier.size(9.dp))
+                    val calendar = Calendar.getInstance().apply { time = date }
+                    val period = if (calendar.get(Calendar.HOUR_OF_DAY) < 12) "صباحًا" else "مساءً"
+                    Text(
+                        SimpleDateFormat("hh:mm", Locale.US).format(date) + " " + period,
+                        color = MutedText,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
@@ -894,8 +898,14 @@ private fun PersonExpensesScreen(
     var expenses by remember(person) { mutableStateOf<List<ExpenseRecord>>(emptyList()) }
     var loading by remember(person) { mutableStateOf(true) }
     var errorText by remember(person) { mutableStateOf<String?>(null) }
-    var selectedHistoryDate by remember(person) { mutableStateOf<Date?>(null) }
+    var historyDates by remember(person) { mutableStateOf<List<Date>>(emptyList()) }
+    val selectedHistoryDate = historyDates.lastOrNull()
     val scrollState = rememberScrollState()
+
+    // Each system-back press pops exactly one history screen before leaving the person page.
+    BackHandler(enabled = historyDates.isNotEmpty()) {
+        historyDates = historyDates.dropLast(1)
+    }
 
     DisposableEffect(person) {
         val names = if (person == "عمرو") listOf("عمرو سامي", "عمرو") else listOf(person)
@@ -937,12 +947,9 @@ private fun PersonExpensesScreen(
     val displayedExpenses = expenses.filter { item ->
         item.createdAt?.let { isSameExpenseDay(it, displayedDate) } ?: false
     }
-    val newExpenses = displayedExpenses.filter { it.id !in seenExpenseIds }
-    val previousExpenses = displayedExpenses.filter { it.id in seenExpenseIds }
     val nextHistoryDate = previousAvailableExpenseDay(expenses, displayedDate)
 
     androidx.compose.runtime.SideEffect {
-        // Keep every date viewed during this visit so those expenses are marked as seen on exit.
         visibleExpenseIds = visibleExpenseIds + displayedExpenses.map { it.id }
     }
     LaunchedEffect(selectedHistoryDate) {
@@ -954,138 +961,132 @@ private fun PersonExpensesScreen(
             Column(
                 modifier = Modifier.weight(1f).fillMaxWidth()
                     .verticalScroll(scrollState)
-                    .padding(horizontal = 18.dp, vertical = 12.dp)
+                    .padding(horizontal = 16.dp, vertical = if (selectedHistoryDate == null) 10.dp else 16.dp)
             ) {
-                TopBar(onSignOut)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("مصروفات $person", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (selectedHistoryDate != null) {
+                if (selectedHistoryDate == null) {
+                    TopBar(onSignOut)
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        "مصروفات يوم " + SimpleDateFormat("dd/MM/yyyy", Locale.US).format(selectedHistoryDate!!),
-                        color = Color(0xFF173F70),
+                        "مصروفات $person",
+                        color = SalamaDark,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        "مصروفات اليوم",
+                        color = SalamaDark,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                } else {
+                    Text(
+                        "مصروفات " + SimpleDateFormat("dd/MM/yyyy", Locale.US).format(selectedHistoryDate),
+                        color = SalamaDark,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.ExtraBold,
                         lineHeight = 32.sp
                     )
-                    TextButton(
-                        onClick = { selectedHistoryDate = null },
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp, vertical = 4.dp)
-                    ) {
-                        Text("العودة إلى مصروفات اليوم", color = SalamaGreen, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                    }
-                } else {
-                    Text("مصروفات اليوم", color = SalamaDark, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                FinancialSummaryCard()
-                Spacer(modifier = Modifier.height(18.dp))
-
                 when {
                     loading -> Box(
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp)
-                            .background(Color.White, RoundedCornerShape(20.dp)).padding(20.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp)
+                            .background(Color.White, RoundedCornerShape(16.dp)).padding(18.dp),
                         contentAlignment = Alignment.Center
-                    ) { Text("جارٍ تحميل المصروفات...", color = MutedText, fontSize = 17.sp) }
+                    ) {
+                        Text("جارٍ تحميل المصروفات...", color = MutedText, fontSize = 16.sp)
+                    }
                     errorText != null -> Box(
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp)
-                            .background(Color.White, RoundedCornerShape(20.dp)).padding(20.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp)
+                            .background(Color.White, RoundedCornerShape(16.dp)).padding(18.dp),
                         contentAlignment = Alignment.Center
-                    ) { Text("تعذر تحميل المصروفات: $errorText", color = Color(0xFFB45309), textAlign = TextAlign.Center, fontSize = 16.sp) }
+                    ) {
+                        Text(
+                            "تعذر تحميل المصروفات: $errorText",
+                            color = Color(0xFFB45309),
+                            textAlign = TextAlign.Center,
+                            fontSize = 15.sp
+                        )
+                    }
                     displayedExpenses.isEmpty() -> Box(
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 130.dp)
-                            .background(Color.White, RoundedCornerShape(20.dp)).padding(20.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 110.dp)
+                            .background(Color.White, RoundedCornerShape(16.dp)).padding(18.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             if (selectedHistoryDate == null) "لا توجد مصروفات مسجلة اليوم" else "لا توجد مصروفات مسجلة في هذا اليوم",
-                            color = MutedText, fontSize = 18.sp, textAlign = TextAlign.Center, lineHeight = 28.sp
+                            color = MutedText,
+                            fontSize = 17.sp,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 26.sp
                         )
                     }
                     else -> Column(
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(11.dp)
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(9.dp)
                     ) {
-                        if (newExpenses.isNotEmpty()) {
-                            Text(
-                                "مصروفات جديدة (" + newExpenses.size + ")",
-                                color = Color(0xFF245A9A),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            newExpenses.forEach { item ->
-                                ExpenseEntryCard(item = item, isNew = true)
-                            }
-                        }
-                        if (previousExpenses.isNotEmpty()) {
-                            if (newExpenses.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(5.dp))
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().height(1.dp)
-                                        .background(Color(0xFFD5DFE8))
-                                )
-                                Spacer(modifier = Modifier.height(5.dp))
-                            }
-                            Text(
-                                "مصروفات سابقة (" + previousExpenses.size + ")",
-                                color = MutedText,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            previousExpenses.forEach { item ->
-                                ExpenseEntryCard(item = item, isNew = false)
-                            }
+                        displayedExpenses.forEach { item ->
+                            ExpenseEntryCard(item = item, isNew = item.id !in seenExpenseIds)
                         }
                     }
                 }
 
-                if (!loading && errorText == null && nextHistoryDate != null) {
-                    Spacer(modifier = Modifier.height(22.dp))
+                if (selectedHistoryDate != null) {
+                    Spacer(modifier = Modifier.height(20.dp))
                     Button(
-                        onClick = { selectedHistoryDate = nextHistoryDate },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF315A83)),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                        onClick = { historyDates = historyDates.dropLast(1) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        shape = RoundedCornerShape(13.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE7EFEB),
+                            contentColor = SalamaDark
+                        )
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("🕘", fontSize = 27.sp, lineHeight = 31.sp)
-                            Text(
-                                if (selectedHistoryDate == null) "عرض المصروفات السابقة" else "عرض اليوم الأقدم",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                        Text("↩  رجوع", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
-                } else if (!loading && errorText == null && selectedHistoryDate != null) {
-                    Spacer(modifier = Modifier.height(18.dp))
+                } else if (!loading && errorText == null && nextHistoryDate != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { historyDates = historyDates + nextHistoryDate },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        shape = RoundedCornerShape(13.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE7EFEB),
+                            contentColor = SalamaDark
+                        )
+                    ) {
+                        Text("◷  عرض المصروفات السابقة", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                } else if (!loading && errorText == null && selectedHistoryDate != null && nextHistoryDate == null) {
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         "لا توجد مصروفات أقدم من هذا اليوم",
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                         color = MutedText,
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         textAlign = TextAlign.Center
                     )
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
-            ) {
-                Button(
-                    onClick = onSettle,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFE7E7), contentColor = Color(0xFFC62828)),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 9.dp)
+            if (selectedHistoryDate == null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("☷", color = Color(0xFFC62828), fontSize = 30.sp, lineHeight = 32.sp)
-                        Text("تصفية العهدة", color = Color(0xFFC62828), fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Button(
+                        onClick = onSettle,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
+                        shape = RoundedCornerShape(13.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFEEEE),
+                            contentColor = Color(0xFFC62828)
+                        ),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text("🧾  تصفية العهدة", color = Color(0xFFC62828), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
