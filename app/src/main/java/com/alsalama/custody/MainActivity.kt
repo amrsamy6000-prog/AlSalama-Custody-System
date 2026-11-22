@@ -942,7 +942,8 @@ private fun PersonExpensesScreen(
     val nextHistoryDate = previousAvailableExpenseDay(expenses, displayedDate)
 
     androidx.compose.runtime.SideEffect {
-        visibleExpenseIds = displayedExpenses.map { it.id }.toSet()
+        // Keep every date viewed during this visit so those expenses are marked as seen on exit.
+        visibleExpenseIds = visibleExpenseIds + displayedExpenses.map { it.id }
     }
     LaunchedEffect(selectedHistoryDate) {
         scrollState.scrollTo(0)
