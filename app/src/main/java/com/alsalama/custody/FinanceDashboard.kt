@@ -203,7 +203,6 @@ internal fun FinanceDashboardScreen(
 @Composable
 internal fun FinancialActionsScreen(
     onFundCustody: () -> Unit,
-    onOpenSettlements: () -> Unit,
     onOpenReports: () -> Unit,
     onBack: () -> Unit,
     onSignOut: () -> Unit
@@ -216,10 +215,9 @@ internal fun FinancialActionsScreen(
             }
             Spacer(Modifier.height(12.dp))
             Text("الإجراءات المالية", color = FinanceDark, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
-            Text("إدارة التمويل والتسويات والتقارير", color = FinanceMuted, fontSize = 13.sp)
+            Text("إدارة تمويل العهد والتقارير المالية", color = FinanceMuted, fontSize = 13.sp)
             Spacer(Modifier.height(22.dp))
             FinanceAction("＋", "تمويل عهدة", "تسجيل مبلغ جديد مع الموظف", onFundCustody)
-            FinanceAction("⇄", "التسويات وإغلاق العهد", "مراجعة المتبقي ورد الأرصدة", onOpenSettlements)
             FinanceAction("▤", "التقارير المالية", "التقارير اليومية والشهرية والسنوية", onOpenReports)
         }
     }
