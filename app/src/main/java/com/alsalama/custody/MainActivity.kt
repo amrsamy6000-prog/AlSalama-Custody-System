@@ -584,10 +584,30 @@ private fun ExpenseQuickEntryScreen(
                         // A client-generated ID makes retries idempotent: the same expense
                         // is written to the same document instead of creating duplicates.
                         val expenseId = UUID.randomUUID().toString()
-                        FirebaseFirestore.getInstance()
-                            .collection("expenses")
-                            .document(expenseId)
-                            .set(expense)
+                        val recordedAt = Date()
+                        val expenseMovement = hashMapOf<String, Any>(
+                            "type" to "expense",
+                            "employeeName" to account.displayName,
+                            "employeeCode" to account.code,
+                            "amount" to cleanAmount,
+                            "currency" to "EGP",
+                            "description" to cleanDetails,
+                            "expenseId" to expenseId,
+                            "createdBy" to account.displayName,
+                            "createdAt" to FieldValue.serverTimestamp(),
+                            "createdAtLocal" to recordedAt,
+                            "status" to "active"
+                        )
+                        val db = FirebaseFirestore.getInstance()
+                        val batch = db.batch()
+                        batch.set(db.collection("expenses").document(expenseId), expense)
+                        // The linked ledger entry shares a deterministic ID with its expense,
+                        // so retries cannot create duplicate financial movements.
+                        batch.set(
+                            db.collection("custody_transactions").document("expense_$expenseId"),
+                            expenseMovement
+                        )
+                        batch.commit()
                             .addOnSuccessListener {
                                 isPendingSync = false
                                 saveFailed = false

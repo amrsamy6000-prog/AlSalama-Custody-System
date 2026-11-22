@@ -50,8 +50,13 @@ private val FinanceDark = Color(0xFF153F35)
 private val FinanceMuted = Color(0xFF718079)
 private val FinancePeople = listOf("عمرو", "عبدالله", "أحمد حسن", "أحمد حمدي")
 
-private data class FinanceExpense(val employeeName: String, val amount: Double)
-private data class CustodyMovement(val employeeName: String, val type: String, val amount: Double)
+private data class FinanceExpense(val id: String, val employeeName: String, val amount: Double)
+private data class CustodyMovement(
+    val employeeName: String,
+    val type: String,
+    val amount: Double,
+    val expenseId: String?
+)
 
 private fun financeEmployeeAliases(name: String): List<String> = when (name) {
     "عمرو" -> listOf("عمرو", "عمرو سامي")
@@ -81,7 +86,11 @@ internal fun FinanceDashboardScreen(
                     loading = false
                 } else if (snapshot != null) {
                     expenses = snapshot.documents.filter { it.getString("status") == "active" }.map {
-                        FinanceExpense(it.getString("employeeName").orEmpty(), it.getDouble("amount") ?: 0.0)
+                        FinanceExpense(
+                            it.id,
+                            it.getString("employeeName").orEmpty(),
+                            it.getDouble("amount") ?: 0.0
+                        )
                     }
                     loading = false
                     error = null
@@ -97,7 +106,8 @@ internal fun FinanceDashboardScreen(
                         CustodyMovement(
                             it.getString("employeeName").orEmpty(),
                             it.getString("type").orEmpty(),
-                            it.getDouble("amount") ?: 0.0
+                            it.getDouble("amount") ?: 0.0,
+                            it.getString("expenseId")
                         )
                     }
                     loading = false
@@ -109,7 +119,15 @@ internal fun FinanceDashboardScreen(
 
     val totalFunding = movements.filter { it.type == "funding" }.sumOf { it.amount }
     val totalReturns = movements.filter { it.type == "return" }.sumOf { it.amount }
-    val totalExpenses = expenses.sumOf { it.amount }
+    // New expenses are counted from the unified ledger. Older expenses remain visible
+    // through the expenses collection until they have a matching ledger movement.
+    val linkedExpenseIds = movements.asSequence()
+        .filter { it.type == "expense" }
+        .mapNotNull { it.expenseId }
+        .toSet()
+    val ledgerExpenses = movements.filter { it.type == "expense" }.sumOf { it.amount }
+    val legacyExpenses = expenses.filter { it.id !in linkedExpenseIds }.sumOf { it.amount }
+    val totalExpenses = ledgerExpenses + legacyExpenses
     val remaining = totalFunding - totalExpenses - totalReturns
 
     Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF2F6F4)) {
