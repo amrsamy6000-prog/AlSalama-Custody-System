@@ -39,7 +39,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -90,7 +89,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.delay
-import kotlin.math.sin
 
 private val SalamaGreen = Color(0xFF176B55)
 private val SalamaDark = Color(0xFF153F35)
@@ -228,7 +226,6 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
     var showSettlement by remember(account.code) { mutableStateOf(false) }
     var showFunding by remember(account.code) { mutableStateOf(false) }
     var showFinancialActions by remember(account.code) { mutableStateOf(false) }
-    var settlementFromHub by remember(account.code) { mutableStateOf(false) }
 
     val isFinance = account.displayName == "سامي هنداوي"
     val isExpenseUser = account.displayName == "عمرو سامي" ||
@@ -239,14 +236,7 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
         enabled = openedSection != null || selectedPerson != null || showSettlement || showFunding || showFinancialActions || professionalMode
     ) {
         when {
-            showSettlement -> {
-                showSettlement = false
-                if (settlementFromHub) {
-                    selectedPerson = null
-                    openedSection = "التسويات وإغلاق العهد"
-                    settlementFromHub = false
-                }
-            }
+            showSettlement -> showSettlement = false
             showFunding -> showFunding = false
             showFinancialActions -> showFinancialActions = false
             openedSection != null -> openedSection = null
@@ -259,53 +249,20 @@ private fun SignedInScreen(account: LoginAccount, onSignOut: () -> Unit) {
     }
 
     if (showSettlement) {
-        SettlementReviewScreen(
-            person = selectedPerson.orEmpty(),
-            settledBy = account.displayName,
-            onBack = {
-                showSettlement = false
-                if (settlementFromHub) {
-                    selectedPerson = null
-                    openedSection = "التسويات وإغلاق العهد"
-                    settlementFromHub = false
-                }
-            },
-            onSettled = {
-                showSettlement = false
-                if (settlementFromHub) {
-                    selectedPerson = null
-                    openedSection = "التسويات وإغلاق العهد"
-                    settlementFromHub = false
-                } else {
-                    selectedPerson = null
-                    showAllExpenses = false
-                }
-            }
+        SimplePlaceholderPage(
+            title = "تصفية عهدة ${selectedPerson.orEmpty()}",
+            description = "هنا هتظهر مراجعة العهدة وإجمالي التمويل والمصروف والمتبقي قبل اعتماد التصفية.",
+            onBack = { showSettlement = false }
         )
         return
     }
 
     if (openedSection != null) {
-        if (isFinance && openedSection == "التقارير المالية") {
-            FinancialReportsScreen(onBack = { openedSection = null }, onSignOut = onSignOut)
-        } else if (isFinance && openedSection == "التسويات وإغلاق العهد") {
-            SettlementHubScreen(
-                onSelectPerson = { person ->
-                    selectedPerson = person
-                    showSettlement = true
-                    settlementFromHub = true
-                    openedSection = null
-                },
-                onBack = { openedSection = null },
-                onSignOut = onSignOut
-            )
-        } else {
-            SimplePlaceholderPage(
-                title = openedSection.orEmpty(),
-                description = "هنضيف وظائف القسم وبياناته الفعلية في المرحلة التالية، مع الحفاظ على سهولة الاستخدام.",
-                onBack = { openedSection = null }
-            )
-        }
+        SimplePlaceholderPage(
+            title = openedSection.orEmpty(),
+            description = "هنضيف وظائف القسم وبياناته الفعلية في المرحلة التالية، مع الحفاظ على سهولة الاستخدام.",
+            onBack = { openedSection = null }
+        )
         return
     }
 
@@ -544,7 +501,6 @@ private fun ExpenseQuickEntryScreen(
 ) {
     var amount by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
-    var expenseFor by remember(account.code) { mutableStateOf(account.displayName) }
     var isSaving by remember { mutableStateOf(false) }
     var saveMessage by remember { mutableStateOf<String?>(null) }
     var lastSuccessMessage by remember { mutableStateOf<String?>(null) }
@@ -575,27 +531,6 @@ private fun ExpenseQuickEntryScreen(
             Text("تسجيل مصروف", color = SalamaDark, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
             Spacer(modifier = Modifier.height(6.dp))
             Text("حساب ${account.displayName}", color = MutedText, fontSize = 16.sp)
-            if (account.displayName == "عمرو سامي" || account.displayName == "عبدالله") {
-                Spacer(modifier = Modifier.height(14.dp))
-                Text("تسجيل المصروف باسم:", color = SalamaDark, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(account.displayName, "أحمد حسن").forEach { beneficiary ->
-                        Button(
-                            onClick = { expenseFor = beneficiary },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                contentColor = if (expenseFor == beneficiary) Color.White else SalamaGreen,
-                                containerColor = if (expenseFor == beneficiary) SalamaGreen else Color.White
-                            )
-                        ) {
-                            Text(if (expenseFor == beneficiary) "✓  " + beneficiary else beneficiary)
-                        }
-                    }
-                }
-            }
             Spacer(modifier = Modifier.height(28.dp))
             OutlinedTextField(
                 value = details, onValueChange = { details = it },
@@ -635,9 +570,8 @@ private fun ExpenseQuickEntryScreen(
                             "description" to cleanDetails,
                             "amount" to cleanAmount,
                             "currency" to "EGP",
-                            "employeeName" to expenseFor,
+                            "employeeName" to account.displayName,
                             "employeeCode" to account.code,
-                            "enteredBy" to account.displayName,
                             "category" to classification.category,
                             "needsManagerReview" to classification.needsManagerReview,
                             "reviewStatus" to if (classification.needsManagerReview) "pending" else "not_required",
@@ -923,529 +857,6 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
     }
 }
 
-
-
-@Composable
-private fun FinancialReportsScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
-    val db = remember { FirebaseFirestore.getInstance() }
-    var funded by remember { mutableStateOf(0.0) }
-    var spent by remember { mutableStateOf(0.0) }
-    var fundingCount by remember { mutableStateOf(0) }
-    var expenseCount by remember { mutableStateOf(0) }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    DisposableEffect(db) {
-        val fundingListener = db.collection("custody_funding")
-            .whereEqualTo("status", "active")
-            .addSnapshotListener { snapshot, exception ->
-                if (exception != null) error = exception.localizedMessage
-                else if (snapshot != null) {
-                    funded = snapshot.documents.sumOf { it.getDouble("amount") ?: 0.0 }
-                    fundingCount = snapshot.size()
-                }
-            }
-        val expenseListener = db.collection("expenses")
-            .whereEqualTo("status", "active")
-            .addSnapshotListener { snapshot, exception ->
-                if (exception != null) error = exception.localizedMessage
-                else if (snapshot != null) {
-                    spent = snapshot.documents.sumOf { it.getDouble("amount") ?: 0.0 }
-                    expenseCount = snapshot.size()
-                }
-            }
-        onDispose {
-            fundingListener.remove()
-            expenseListener.remove()
-        }
-    }
-
-    Surface(Modifier.fillMaxSize(), color = PageBackground) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
-            TopBar(onSignOut)
-            Text("التقارير المالية", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
-            Text("ملخص مباشر للحركات النشطة المسجلة على النظام", color = MutedText, fontSize = 13.sp)
-            Spacer(Modifier.height(18.dp))
-            CompactFinancialValue("إجمالي التمويل", String.format(Locale.US, "%,.2f ج.م", funded),
-                Color(0xFFEAF0F7), Color(0xFF315A83), Modifier.fillMaxWidth())
-            Spacer(Modifier.height(9.dp))
-            CompactFinancialValue("إجمالي المصروفات", String.format(Locale.US, "%,.2f ج.م", spent),
-                Color(0xFFFFF2E5), Color(0xFFB66A20), Modifier.fillMaxWidth())
-            Spacer(Modifier.height(9.dp))
-            CompactFinancialValue("الرصيد الحالي", String.format(Locale.US, "%,.2f ج.م", funded - spent),
-                Color(0xFFE8F4EC), if (funded - spent < 0) Color(0xFFB42318) else Color(0xFF23734D),
-                Modifier.fillMaxWidth())
-            Spacer(Modifier.height(18.dp))
-            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(Modifier.padding(17.dp)) {
-                    Text("عدد الحركات النشطة", color = SalamaDark, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    Text("عمليات التمويل: $fundingCount", color = MutedText)
-                    Text("عمليات المصروفات: $expenseCount", color = MutedText)
-                }
-            }
-            if (error != null) {
-                Spacer(Modifier.height(10.dp))
-                Text("تعذر تحديث التقرير: " + error.orEmpty(), color = Color(0xFFB45309), fontSize = 13.sp)
-            }
-            Spacer(Modifier.height(20.dp))
-            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                Text("رجوع", color = SalamaGreen)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettlementHubScreen(
-    onSelectPerson: (String) -> Unit,
-    onBack: () -> Unit,
-    onSignOut: () -> Unit
-) {
-    val people = listOf("عمرو سامي", "عبدالله", "أحمد حسن", "أحمد حمدي")
-    Surface(Modifier.fillMaxSize(), color = PageBackground) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
-            TopBar(onSignOut)
-            Text("التسويات وإغلاق العهد", color = SalamaDark, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-            Text("اختر العهدة لمراجعة أرقامها قبل الإغلاق", color = MutedText, fontSize = 14.sp)
-            Spacer(Modifier.height(18.dp))
-            people.forEach { person ->
-                Card(
-                    Modifier.fillMaxWidth().padding(bottom = 10.dp).clickable { onSelectPerson(person) },
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(person, color = SalamaDark, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.weight(1f))
-                        Text("مراجعة التسوية  ‹", color = SalamaGreen, fontSize = 13.sp)
-                    }
-                }
-            }
-            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                Text("رجوع", color = SalamaGreen)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettlementReviewScreen(
-    person: String,
-    settledBy: String,
-    onBack: () -> Unit,
-    onSettled: () -> Unit
-) {
-    val db = remember { FirebaseFirestore.getInstance() }
-    var fundingDocs by remember(person) { mutableStateOf<List<com.google.firebase.firestore.DocumentSnapshot>>(emptyList()) }
-    var expenseDocs by remember(person) { mutableStateOf<List<com.google.firebase.firestore.DocumentSnapshot>>(emptyList()) }
-    var confirming by remember { mutableStateOf(false) }
-    var saving by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf<String?>(null) }
-    val names = if (person == "عمرو سامي") listOf("عمرو سامي", "عمرو") else listOf(person)
-    val funded = fundingDocs.sumOf { it.getDouble("amount") ?: 0.0 }
-    val spent = expenseDocs.sumOf { it.getDouble("amount") ?: 0.0 }
-    val remaining = funded - spent
-
-    DisposableEffect(person) {
-        val fundingListener = db.collection("custody_funding")
-            .whereEqualTo("personName", person)
-            .whereEqualTo("status", "active")
-            .addSnapshotListener { snapshot, error ->
-                if (error == null && snapshot != null) fundingDocs = snapshot.documents
-                else if (error != null) message = error.localizedMessage
-            }
-        val expenseListener = db.collection("expenses")
-            .whereEqualTo("status", "active")
-            .addSnapshotListener { snapshot, error ->
-                if (error == null && snapshot != null) {
-                    expenseDocs = snapshot.documents.filter { it.getString("employeeName") in names }
-                } else if (error != null) message = error.localizedMessage
-            }
-        onDispose {
-            fundingListener.remove()
-            expenseListener.remove()
-        }
-    }
-
-    if (confirming) {
-        AlertDialog(
-            onDismissRequest = { if (!saving) confirming = false },
-            title = { Text("تأكيد إغلاق العهدة") },
-            text = {
-                Text(
-                    "سيتم إغلاق " + fundingDocs.size + " عملية تمويل و" + expenseDocs.size +
-                        " عملية مصروف للعهدة: $person. المتبقي الحالي: " +
-                        String.format(Locale.US, "%,.2f ج.م", remaining) +
-                        ". لا يمكن اعتبار العملية قابلة للتراجع من داخل التطبيق."
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = !saving,
-                    onClick = {
-                        saving = true
-                        val batch = db.batch()
-                        fundingDocs.forEach { batch.update(it.reference, "status", "settled") }
-                        expenseDocs.forEach { batch.update(it.reference, "status", "settled") }
-                        val settlementRef = db.collection("custody_settlements").document()
-                        batch.set(settlementRef, hashMapOf<String, Any>(
-                            "personName" to person,
-                            "fundedAmount" to funded,
-                            "spentAmount" to spent,
-                            "remainingAmount" to remaining,
-                            "fundingCount" to fundingDocs.size,
-                            "expenseCount" to expenseDocs.size,
-                            "settledBy" to settledBy,
-                            "settledAt" to FieldValue.serverTimestamp(),
-                            "settledAtLocal" to Date(),
-                            "status" to "closed"
-                        ))
-                        batch.commit()
-                            .addOnSuccessListener {
-                                saving = false
-                                confirming = false
-                                onSettled()
-                            }
-                            .addOnFailureListener { exception ->
-                                saving = false
-                                message = "فشل إغلاق العهدة: " + (exception.localizedMessage ?: "خطأ غير معروف")
-                                confirming = false
-                            }
-                    }
-                ) { Text(if (saving) "جارٍ الإغلاق…" else "تأكيد الإغلاق", color = Color(0xFFB42318)) }
-            },
-            dismissButton = {
-                TextButton(enabled = !saving, onClick = { confirming = false }) { Text("إلغاء") }
-            }
-        )
-    }
-
-    Surface(Modifier.fillMaxSize(), color = PageBackground) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
-            Text("مراجعة تصفية العهدة", color = SalamaDark, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-            Text(person, color = MutedText, fontSize = 16.sp)
-            Spacer(Modifier.height(20.dp))
-            CompactFinancialValue("إجمالي التمويل", String.format(Locale.US, "%,.2f ج.م", funded),
-                Color(0xFFEAF0F7), Color(0xFF315A83), Modifier.fillMaxWidth())
-            Spacer(Modifier.height(9.dp))
-            CompactFinancialValue("إجمالي المصروفات", String.format(Locale.US, "%,.2f ج.م", spent),
-                Color(0xFFFFF2E5), Color(0xFFB66A20), Modifier.fillMaxWidth())
-            Spacer(Modifier.height(9.dp))
-            CompactFinancialValue("المتبقي", String.format(Locale.US, "%,.2f ج.م", remaining),
-                Color(0xFFE8F4EC), if (remaining < 0) Color(0xFFB42318) else Color(0xFF23734D),
-                Modifier.fillMaxWidth())
-            Spacer(Modifier.height(12.dp))
-            Text("عدد التمويلات: " + fundingDocs.size, color = MutedText)
-            Text("عدد المصروفات: " + expenseDocs.size, color = MutedText)
-            if (message != null) {
-                Spacer(Modifier.height(10.dp))
-                Text(message.orEmpty(), color = Color(0xFFB42318), fontSize = 13.sp)
-            }
-            Spacer(Modifier.height(20.dp))
-            Button(
-                onClick = { confirming = true },
-                enabled = !saving && (fundingDocs.isNotEmpty() || expenseDocs.isNotEmpty()),
-                modifier = Modifier.fillMaxWidth().height(55.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB7791F))
-            ) { Text("مراجعة الأرقام ثم إغلاق العهدة", fontWeight = FontWeight.Bold) }
-            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("رجوع دون إغلاق", color = SalamaGreen) }
-        }
-    }
-}
-
-private data class CustodyTotals(
-    val person: String,
-    val funded: Double,
-    val spent: Double
-) {
-    val remaining: Double get() = funded - spent
-}
-
-@Composable
-private fun FinanceDashboardScreen(
-    onOpenPerson: (String) -> Unit,
-    onOpenFinancialActions: () -> Unit,
-    onSignOut: () -> Unit
-) {
-    val db = remember { FirebaseFirestore.getInstance() }
-    var fundingTotals by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
-    var expenseTotals by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
-    var loading by remember { mutableStateOf(true) }
-    var loadError by remember { mutableStateOf<String?>(null) }
-    val people = listOf("عمرو سامي", "عبدالله", "أحمد حسن", "أحمد حمدي")
-
-    DisposableEffect(db) {
-        val fundingListener = db.collection("custody_funding")
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    loadError = error.localizedMessage ?: "تعذر تحميل التمويلات"
-                } else if (snapshot != null) {
-                    fundingTotals = snapshot.documents
-                        .filter { it.getString("status") == "active" }
-                        .groupBy { it.getString("personName").orEmpty() }
-                        .mapValues { entry -> entry.value.sumOf { it.getDouble("amount") ?: 0.0 } }
-                    loading = false
-                }
-            }
-        val expenseListener = db.collection("expenses")
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    loadError = error.localizedMessage ?: "تعذر تحميل المصروفات"
-                } else if (snapshot != null) {
-                    expenseTotals = snapshot.documents
-                        .filter { it.getString("status") == "active" }
-                        .groupBy { it.getString("employeeName").orEmpty() }
-                        .mapValues { entry -> entry.value.sumOf { it.getDouble("amount") ?: 0.0 } }
-                    loading = false
-                }
-            }
-        onDispose {
-            fundingListener.remove()
-            expenseListener.remove()
-        }
-    }
-
-    Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                .padding(horizontal = 18.dp, vertical = 14.dp)
-        ) {
-            TopBar(onSignOut)
-            Spacer(Modifier.height(10.dp))
-            Text("الإدارة المالية", color = SalamaDark, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-            Text("متابعة العهد والتمويل والمصروفات", color = MutedText, fontSize = 14.sp)
-            Spacer(Modifier.height(18.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = SalamaDark)
-            ) {
-                Column(Modifier.padding(18.dp)) {
-                    Text("إجمالي العهد النشطة", color = Color(0xFFD7E9E0), fontSize = 14.sp)
-                    Spacer(Modifier.height(7.dp))
-                    Text(
-                        String.format(Locale.US, "%,.2f ج.م", fundingTotals.values.sum()),
-                        color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        "المصروفات النشطة: " + String.format(Locale.US, "%,.2f ج.م", expenseTotals.values.sum()),
-                        color = Color(0xFFD7E9E0), fontSize = 13.sp
-                    )
-                }
-            }
-            Spacer(Modifier.height(18.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("العهد الأربع", color = SalamaDark, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.weight(1f))
-                if (loading) Text("جارٍ التحديث…", color = MutedText, fontSize = 12.sp)
-            }
-            if (loadError != null) {
-                Spacer(Modifier.height(8.dp))
-                Text("تعذر تحديث بعض البيانات: " + loadError.orEmpty(), color = Color(0xFFB45309), fontSize = 13.sp)
-            }
-            people.forEach { person ->
-                val totals = CustodyTotals(
-                    person,
-                    fundingTotals[person] ?: 0.0,
-                    expenseTotals[person] ?: 0.0
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
-                        .clickable { onOpenPerson(person) },
-                    shape = RoundedCornerShape(17.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(Modifier.fillMaxWidth().padding(15.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(person, color = SalamaDark, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.weight(1f))
-                            Text("التفاصيل  ‹", color = SalamaGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
-                            CompactFinancialValue(
-                                "التمويل", String.format(Locale.US, "%,.0f", totals.funded),
-                                Color(0xFFEAF0F7), Color(0xFF315A83), Modifier.weight(1f)
-                            )
-                            CompactFinancialValue(
-                                "المصروف", String.format(Locale.US, "%,.0f", totals.spent),
-                                Color(0xFFFFF2E5), Color(0xFFB66A20), Modifier.weight(1f)
-                            )
-                            CompactFinancialValue(
-                                "المتبقي", String.format(Locale.US, "%,.0f", totals.remaining),
-                                Color(0xFFE8F4EC), if (totals.remaining < 0) Color(0xFFB42318) else Color(0xFF23734D),
-                                Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(18.dp))
-            Button(
-                onClick = onOpenFinancialActions,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
-            ) {
-                Text("التمويل والتسويات والتقارير", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.height(20.dp))
-        }
-    }
-}
-
-@Composable
-private fun FinancialActionsScreen(
-    onFundCustody: () -> Unit,
-    onOpenSettlements: () -> Unit,
-    onOpenReports: () -> Unit,
-    onBack: () -> Unit,
-    onSignOut: () -> Unit
-) {
-    Surface(Modifier.fillMaxSize(), color = PageBackground) {
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
-        ) {
-            TopBar(onSignOut)
-            Text("إدارة العهد المالية", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
-            Text("اختر العملية المطلوبة", color = MutedText, fontSize = 14.sp)
-            Spacer(Modifier.height(22.dp))
-            val actions = listOf(
-                Triple("تمويل عهدة جديدة", "إضافة مبلغ إلى عهدة أحد العاملين", onFundCustody),
-                Triple("التسويات وإغلاق العهد", "مراجعة التمويل والمصروف والمتبقي قبل التسوية", onOpenSettlements),
-                Triple("التقارير المالية", "ملخص التمويلات والمصروفات والأرصدة", onOpenReports)
-            )
-            actions.forEach { action ->
-                Card(
-                    Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable { action.third() },
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
-                    Column(Modifier.padding(18.dp)) {
-                        Text(action.first, color = SalamaDark, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(5.dp))
-                        Text(action.second, color = MutedText, fontSize = 13.sp)
-                    }
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                Text("رجوع للوحة الإدارة", color = SalamaGreen)
-            }
-        }
-    }
-}
-
-@Composable
-private fun FundingEntryScreen(
-    createdBy: String,
-    onBack: () -> Unit
-) {
-    val db = remember { FirebaseFirestore.getInstance() }
-    val people = listOf("عمرو سامي", "عبدالله", "أحمد حسن", "أحمد حمدي")
-    var selectedPerson by remember { mutableStateOf<String?>(null) }
-    var amount by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    var saving by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf<String?>(null) }
-    val amountValue = amount.trim().replace(',', '.').toDoubleOrNull()
-
-    Surface(Modifier.fillMaxSize(), color = PageBackground) {
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
-        ) {
-            Text("تمويل عهدة", color = SalamaDark, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-            Text("تسجيل مبلغ جديد مع الاحتفاظ بسجل التمويلات", color = MutedText, fontSize = 14.sp)
-            Spacer(Modifier.height(22.dp))
-            Text("صاحب العهدة", color = SalamaDark, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            people.forEach { person ->
-                val selected = selectedPerson == person
-                Button(
-                    onClick = { selectedPerson = person; message = null },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        contentColor = if (selected) Color.White else SalamaGreen,
-                        containerColor = if (selected) SalamaGreen else Color.White
-                    )
-                ) {
-                    Text(if (selected) "✓  " + person else person, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(5.dp))
-            }
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = amount,
-                onValueChange = { amount = it; message = null },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                label = { Text("مبلغ التمويل بالجنيه") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                shape = RoundedCornerShape(14.dp)
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("ملاحظات (اختياري)") },
-                minLines = 2,
-                shape = RoundedCornerShape(14.dp)
-            )
-            if (message != null) {
-                Spacer(Modifier.height(10.dp))
-                Text(message.orEmpty(), color = if (saving) MutedText else SalamaGreen, fontSize = 14.sp)
-            }
-            Spacer(Modifier.height(18.dp))
-            Button(
-                onClick = {
-                    val person = selectedPerson
-                    val value = amountValue
-                    if (person == null) {
-                        message = "اختار صاحب العهدة الأول."
-                    } else if (value == null || value <= 0.0) {
-                        message = "اكتب مبلغ تمويل صحيح أكبر من صفر."
-                    } else {
-                        saving = true
-                        message = "جارٍ حفظ التمويل…"
-                        val record = hashMapOf<String, Any>(
-                            "personName" to person,
-                            "amount" to value,
-                            "note" to note.trim(),
-                            "createdBy" to createdBy,
-                            "createdAt" to FieldValue.serverTimestamp(),
-                            "createdAtLocal" to Date(),
-                            "status" to "active"
-                        )
-                        db.collection("custody_funding").add(record)
-                            .addOnSuccessListener {
-                                saving = false
-                                amount = ""
-                                note = ""
-                                selectedPerson = null
-                                message = "تم تسجيل التمويل بنجاح."
-                            }
-                            .addOnFailureListener { error ->
-                                saving = false
-                                message = "تعذر حفظ التمويل: " + (error.localizedMessage ?: "راجع الاتصال والصلاحيات")
-                            }
-                    }
-                },
-                enabled = !saving,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)
-            ) {
-                Text(if (saving) "جارٍ الحفظ…" else "حفظ التمويل", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
-            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                Text("رجوع", color = SalamaGreen)
-            }
-        }
-    }
-}
-
 @Composable
 private fun PersonExpensesScreen(
     person: String,
@@ -1466,20 +877,6 @@ private fun PersonExpensesScreen(
     var expenses by remember(person) { mutableStateOf<List<ExpenseRecord>>(emptyList()) }
     var loading by remember(person) { mutableStateOf(true) }
     var errorText by remember(person) { mutableStateOf<String?>(null) }
-    var fundedAmount by remember(person) { mutableStateOf(0.0) }
-
-    DisposableEffect(person) {
-        val fundingRegistration = FirebaseFirestore.getInstance()
-            .collection("custody_funding")
-            .whereEqualTo("personName", person)
-            .whereEqualTo("status", "active")
-            .addSnapshotListener { snapshot, error ->
-                if (error == null && snapshot != null) {
-                    fundedAmount = snapshot.documents.sumOf { it.getDouble("amount") ?: 0.0 }
-                }
-            }
-        onDispose { fundingRegistration.remove() }
-    }
 
     DisposableEffect(person) {
         val names = if (person == "عمرو") listOf("عمرو سامي", "عمرو") else listOf(person)
@@ -1542,10 +939,7 @@ private fun PersonExpensesScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("مصروفات $person", color = SalamaDark, fontSize = 25.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
-                FinancialSummaryCard(
-                    fundedAmount = fundedAmount,
-                    spentAmount = expenses.sumOf { it.amount }
-                )
+                FinancialSummaryCard()
                 Spacer(modifier = Modifier.height(18.dp))
                 Text(if (showAll) "كل مصروفات العهدة الحالية" else "مصروفات اليوم",
                     color = SalamaDark, fontSize = 19.sp, fontWeight = FontWeight.Bold)
@@ -1636,8 +1030,7 @@ private fun PersonExpensesScreen(
 }
 
 @Composable
-private fun FinancialSummaryCard(fundedAmount: Double, spentAmount: Double) {
-    val remaining = fundedAmount - spentAmount
+private fun FinancialSummaryCard() {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
@@ -1645,23 +1038,23 @@ private fun FinancialSummaryCard(fundedAmount: Double, spentAmount: Double) {
     ) {
         CompactFinancialValue(
             label = "قيمة العهدة",
-            value = String.format(Locale.US, "%,.0f", fundedAmount),
+            value = "—",
             background = Color(0xFFEAF0F7),
             valueColor = Color(0xFF315A83),
             modifier = Modifier.weight(1f)
         )
         CompactFinancialValue(
             label = "المصروفات",
-            value = String.format(Locale.US, "%,.0f", spentAmount),
+            value = "—",
             background = Color(0xFFFFF2E5),
             valueColor = Color(0xFFB66A20),
             modifier = Modifier.weight(1f)
         )
         CompactFinancialValue(
             label = "المتبقي",
-            value = String.format(Locale.US, "%,.0f", remaining),
+            value = "—",
             background = Color(0xFFE8F4EC),
-            valueColor = if (remaining < 0) Color(0xFFB42318) else Color(0xFF23734D),
+            valueColor = Color(0xFF23734D),
             modifier = Modifier.weight(1f)
         )
     }
