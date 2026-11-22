@@ -776,7 +776,7 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(15.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isNew) Color(0xFFF0F6F1) else Color.White
+            containerColor = if (isNew) Color.White else Color(0xFFF1F2F2)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -852,14 +852,14 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                Text(expenseCategoryIcon(categoryName), fontSize = 24.sp)
-                Spacer(modifier = Modifier.size(7.dp))
                 Text(
                     categoryName,
                     color = Color(0xFF56665E),
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
+                Spacer(modifier = Modifier.size(6.dp))
+                Text(expenseCategoryIcon(categoryName), fontSize = 20.sp)
             }
         }
     }
@@ -1003,17 +1003,10 @@ private fun PersonExpensesScreen(
                     TopBar(onSignOut)
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        "مصروفات $person",
+                        "مصروفات $person اليوم",
                         color = SalamaDark,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(
-                        "مصروفات اليوم",
-                        color = SalamaDark,
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     PersonFinancialSummaryCard(
@@ -1022,13 +1015,24 @@ private fun PersonExpensesScreen(
                         remaining = if (movementsLoaded) formatExpenseAmount(remainingCustody) else "—"
                     )
                 } else {
-                    Text(
-                        "مصروفات " + SimpleDateFormat("dd/MM/yyyy", Locale.US).format(selectedHistoryDate),
-                        color = SalamaDark,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        lineHeight = 32.sp
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "مصروفات $person",
+                            color = SalamaDark,
+                            fontSize = 23.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Spacer(modifier = Modifier.size(9.dp))
+                        Text(
+                            SimpleDateFormat("dd/MM/yyyy", Locale.US).format(selectedHistoryDate),
+                            color = SalamaGreen,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -1082,7 +1086,7 @@ private fun PersonExpensesScreen(
                             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             shape = RoundedCornerShape(13.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFE7EFEB),
+                                containerColor = Color(0xFFF0F1F1),
                                 contentColor = SalamaDark
                             )
                         ) {
@@ -1095,7 +1099,7 @@ private fun PersonExpensesScreen(
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                         shape = RoundedCornerShape(13.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE7EFEB),
+                            containerColor = Color(0xFFF0F1F1),
                             contentColor = SalamaDark
                         )
                     ) {
@@ -1108,7 +1112,7 @@ private fun PersonExpensesScreen(
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                         shape = RoundedCornerShape(13.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE7EFEB),
+                            containerColor = Color(0xFFF0F1F1),
                             contentColor = SalamaDark
                         )
                     ) {
@@ -1137,12 +1141,26 @@ private fun PersonExpensesScreen(
                         modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
                         shape = RoundedCornerShape(13.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFFEEEE),
-                            contentColor = Color(0xFFC62828)
+                            containerColor = Color(0xFFFFF4F3),
+                            contentColor = Color(0xFFB83232)
                         ),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text("🧾  تصفية العهدة", color = Color(0xFFC62828), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(29.dp)
+                                    .background(Color(0xFFFFE2DF), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("↻", color = Color(0xFFB83232), fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.size(9.dp))
+                            Text("تصفية العهدة", color = Color(0xFFB83232), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
