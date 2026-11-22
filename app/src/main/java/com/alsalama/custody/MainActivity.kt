@@ -112,7 +112,7 @@ private val loginAccounts = listOf(
     )),
     LoginAccount(charArrayOf(52.toChar(), 52.toChar(), 49.toChar(), 52.toChar(), 48.toChar(), 48.toChar()).concatToString(), "سامي هنداوي", "الإدارة المالية", listOf(
         "لوحة متابعة العهد الأربعة", "تمويل العهد",
-        "تسوية وإغلاق العهد", "الإجماليات والأرصدة والتقارير"
+        "الإجماليات والأرصدة والتقارير"
     )),
     LoginAccount(charArrayOf(49.toChar(), 48.toChar(), 48.toChar(), 49.toChar(), 48.toChar(), 48.toChar()).concatToString(), "عبدالله", "مسؤول العمليات", listOf(
         "تسجيل مصروفاته ومصروفات أحمد حسن", "الاطلاع على جميع العهد والمصروفات"
@@ -770,7 +770,7 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(17.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isNew) Color(0xFFEAF2FF) else Color.White
+            containerColor = if (isNew) Color(0xFFFFF2D9) else Color.White
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isNew) 3.dp else 1.dp)
     ) {
@@ -792,9 +792,9 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
                     Text(
                         "جديد",
                         modifier = Modifier
-                            .background(Color(0xFFD6E7FF), RoundedCornerShape(9.dp))
+                            .background(Color(0xFFFFDFA3), RoundedCornerShape(9.dp))
                             .padding(horizontal = 10.dp, vertical = 5.dp),
-                        color = Color(0xFF245A9A),
+                        color = Color(0xFF8A4B08),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1080,12 +1080,12 @@ private fun PersonExpensesScreen(
                     onClick = onSettle,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
                     shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFE7E7), contentColor = Color(0xFFC62828)),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 9.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("🧾", fontSize = 27.sp, lineHeight = 30.sp)
-                        Text("تصفية العهدة", fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                        Text("☷", color = Color(0xFFC62828), fontSize = 30.sp, lineHeight = 32.sp)
+                        Text("تصفية العهدة", color = Color(0xFFC62828), fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     }
                 }
             }
