@@ -1,5 +1,7 @@
 package com.alsalama.custody
 
+import kotlin.math.sin
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
