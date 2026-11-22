@@ -733,6 +733,12 @@ private data class ExpenseRecord(
     val pendingSync: Boolean = false
 )
 
+private data class PersonCustodyMovement(
+    val type: String,
+    val amount: Double,
+    val expenseId: String?
+)
+
 private fun formatExpenseAmount(amount: Double): String =
     BigDecimal.valueOf(amount).stripTrailingZeros().toPlainString()
 
@@ -812,24 +818,13 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(expenseCategoryIcon(categoryName), fontSize = 21.sp)
-                Spacer(modifier = Modifier.size(7.dp))
-                Text(
-                    categoryName,
-                    color = Color(0xFF56665E),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f)
-                )
-                if (item.pendingSync) {
+                item.createdAt?.let { date ->
+                    val calendar = Calendar.getInstance().apply { time = date }
+                    val period = if (calendar.get(Calendar.HOUR_OF_DAY) < 12) "صباحًا" else "مساءً"
                     Text(
-                        "بانتظار المزامنة",
-                        modifier = Modifier
-                            .background(Color(0xFFE7EEF9), RoundedCornerShape(7.dp))
-                            .padding(horizontal = 6.dp, vertical = 3.dp),
-                        color = Color(0xFF315A91),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold
+                        SimpleDateFormat("hh:mm", Locale.US).format(date) + " " + period,
+                        color = MutedText,
+                        fontSize = 12.sp
                     )
                 }
                 if (item.needsManagerReview) {
@@ -844,16 +839,27 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-                item.createdAt?.let { date ->
-                    Spacer(modifier = Modifier.size(9.dp))
-                    val calendar = Calendar.getInstance().apply { time = date }
-                    val period = if (calendar.get(Calendar.HOUR_OF_DAY) < 12) "صباحًا" else "مساءً"
+                if (item.pendingSync) {
+                    Spacer(modifier = Modifier.size(5.dp))
                     Text(
-                        SimpleDateFormat("hh:mm", Locale.US).format(date) + " " + period,
-                        color = MutedText,
-                        fontSize = 12.sp
+                        "بانتظار المزامنة",
+                        modifier = Modifier
+                            .background(Color(0xFFE7EEF9), RoundedCornerShape(7.dp))
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
+                        color = Color(0xFF315A91),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
+                Spacer(modifier = Modifier.weight(1f))
+                Text(expenseCategoryIcon(categoryName), fontSize = 24.sp)
+                Spacer(modifier = Modifier.size(7.dp))
+                Text(
+                    categoryName,
+                    color = Color(0xFF56665E),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -896,6 +902,8 @@ private fun PersonExpensesScreen(
     }
     var visibleExpenseIds by remember(person) { mutableStateOf<Set<String>>(emptySet()) }
     var expenses by remember(person) { mutableStateOf<List<ExpenseRecord>>(emptyList()) }
+    var custodyMovements by remember(person) { mutableStateOf<List<PersonCustodyMovement>>(emptyList()) }
+    var movementsLoaded by remember(person) { mutableStateOf(false) }
     var loading by remember(person) { mutableStateOf(true) }
     var errorText by remember(person) { mutableStateOf<String?>(null) }
     var historyDates by remember(person) { mutableStateOf<List<Date>>(emptyList()) }
@@ -934,8 +942,28 @@ private fun PersonExpensesScreen(
                     loading = false
                 }
             }
+        val movementRegistration: ListenerRegistration = FirebaseFirestore.getInstance()
+            .collection("custody_transactions")
+            .addSnapshotListener { snapshot, movementError ->
+                if (movementError == null && snapshot != null) {
+                    custodyMovements = snapshot.documents
+                        .filter {
+                            it.getString("employeeName") in names &&
+                                it.getString("status") == "active"
+                        }
+                        .map { doc ->
+                            PersonCustodyMovement(
+                                type = doc.getString("type").orEmpty(),
+                                amount = (doc.get("amount") as? Number)?.toDouble() ?: 0.0,
+                                expenseId = doc.getString("expenseId")
+                            )
+                        }
+                    movementsLoaded = true
+                }
+            }
         onDispose {
             registration.remove()
+            movementRegistration.remove()
             seenPreferences.edit()
                 .putStringSet("seen_ids", (seenExpenseIds + visibleExpenseIds).toSet())
                 .apply()
@@ -948,6 +976,14 @@ private fun PersonExpensesScreen(
         item.createdAt?.let { isSameExpenseDay(it, displayedDate) } ?: false
     }
     val nextHistoryDate = previousAvailableExpenseDay(expenses, displayedDate)
+    val totalFunding = custodyMovements.filter { it.type == "funding" }.sumOf { it.amount }
+    val totalReturns = custodyMovements.filter { it.type == "return" }.sumOf { it.amount }
+    val linkedExpenseIds = custodyMovements.filter { it.type == "expense" }
+        .mapNotNull { it.expenseId }.toSet()
+    val ledgerExpenses = custodyMovements.filter { it.type == "expense" }.sumOf { it.amount }
+    val legacyExpenses = expenses.filter { it.id !in linkedExpenseIds }.sumOf { it.amount }
+    val totalPersonExpenses = ledgerExpenses + legacyExpenses
+    val remainingCustody = totalFunding - totalPersonExpenses - totalReturns
 
     androidx.compose.runtime.SideEffect {
         visibleExpenseIds = visibleExpenseIds + displayedExpenses.map { it.id }
@@ -978,6 +1014,12 @@ private fun PersonExpensesScreen(
                         color = SalamaDark,
                         fontSize = 19.sp,
                         fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    PersonFinancialSummaryCard(
+                        funding = if (movementsLoaded) formatExpenseAmount(totalFunding) else "—",
+                        expenses = if (movementsLoaded) formatExpenseAmount(totalPersonExpenses) else "—",
+                        remaining = if (movementsLoaded) formatExpenseAmount(remainingCustody) else "—"
                     )
                 } else {
                     Text(
@@ -1105,6 +1147,41 @@ private fun PersonExpensesScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PersonFinancialSummaryCard(
+    funding: String,
+    expenses: String,
+    remaining: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CompactFinancialValue(
+            label = "العهدة",
+            value = funding,
+            background = Color(0xFFEAF0F7),
+            valueColor = Color(0xFF315A83),
+            modifier = Modifier.weight(1f)
+        )
+        CompactFinancialValue(
+            label = "المصروفات",
+            value = expenses,
+            background = Color(0xFFFFF2E5),
+            valueColor = Color(0xFFB66A20),
+            modifier = Modifier.weight(1f)
+        )
+        CompactFinancialValue(
+            label = "المتبقي",
+            value = remaining,
+            background = Color(0xFFE8F4EC),
+            valueColor = Color(0xFF23734D),
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
