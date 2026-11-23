@@ -83,6 +83,31 @@ export default {
       return json({ ok: true, service: "alsalama-auth" });
     }
 
+    // Reports configuration readiness without exposing secret values.
+    if (url.pathname === "/status" && request.method === "GET") {
+      let employeesConfigured = false;
+      let serviceAccountConfigured = false;
+      try {
+        const accounts = JSON.parse(env.EMPLOYEE_CODES_JSON || "null");
+        employeesConfigured = !!accounts && typeof accounts === "object" && !Array.isArray(accounts) && Object.keys(accounts).length > 0;
+      } catch {}
+      try {
+        const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON || "null");
+        serviceAccountConfigured = !!serviceAccount &&
+          typeof serviceAccount.client_email === "string" &&
+          typeof serviceAccount.private_key === "string" &&
+          typeof serviceAccount.project_id === "string";
+      } catch {}
+      return json({
+        ok: employeesConfigured && serviceAccountConfigured,
+        service: "alsalama-auth",
+        checks: {
+          employeeCodesConfigured: employeesConfigured,
+          firebaseServiceAccountConfigured: serviceAccountConfigured
+        }
+      });
+    }
+
     if (url.pathname !== "/login" || request.method !== "POST") {
       return json({ error: "not_found" }, 404);
     }
