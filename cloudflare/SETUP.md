@@ -17,12 +17,19 @@
 المفتاح يُستخدم فقط لتوقيع Firebase Custom Tokens. توثيق Firebase:
 https://firebase.google.com/docs/auth/admin/create-custom-tokens
 
-## 2) نشر Worker على Cloudflare
-1. افتح https://dash.cloudflare.com وسجّل الدخول.
-2. من Workers & Pages أنشئ Worker باسم alsalama-auth.
-3. افتح Edit code واستبدل المحتوى بمحتوى worker.js الموجود في هذا المجلد، ثم احفظ وانشر.
-4. من Settings ثم Variables and Secrets أضف Secret باسم FIREBASE_SERVICE_ACCOUNT_JSON والصق محتوى ملف JSON كاملًا.
-5. أضف Secret باسم EMPLOYEE_CODES_JSON. قيمته كائن JSON، ومثاله بالشكل التالي فقط (استبدل القيم بأكوادك الفعلية ولا تضعها في GitHub):
+## 2) النشر التلقائي من GitHub
+تم تجهيز Worker داخل هذا المجلد:
+- Root directory / Path: `cloudflare`
+- Production branch: `setup/android-app-foundation`
+- Build command: اتركه فارغًا
+- Deploy command: `npx wrangler deploy`
+
+بعد ربط GitHub، أي commit جديد على فرع الإنتاج يشغّل Cloudflare Builds تلقائيًا. تأكد من أن آخر Deployment مصدره GitHub وحالته Ready قبل اختبار الخدمة.
+
+## 3) إضافة الأسرار في Cloudflare
+من Worker ثم Settings ثم Variables and Secrets أضف:
+1. Secret باسم `FIREBASE_SERVICE_ACCOUNT_JSON`، وقيمته محتوى ملف Service Account JSON كاملًا.
+2. Secret باسم `EMPLOYEE_CODES_JSON`. قيمته كائن JSON، ومثاله بالشكل التالي فقط (استبدل القيم بأكوادك الفعلية ولا تضعها في GitHub):
    {
      "CODE_FOR_AMR": {
        "uid": "salama_amr_samy",
@@ -42,17 +49,17 @@ https://firebase.google.com/docs/auth/admin/create-custom-tokens
      }
    }
    ملاحظة: استبدل CODE_FOR_... بالأكواد الرقمية الفعلية كنصوص بين علامتي اقتباس.
-6. أضف Rate Limiting binding باسم LOGIN_RATE_LIMITER، بحد 10 طلبات لكل 60 ثانية لكل عنوان IP. إعداد هذا الربط موجود في wrangler.toml عند النشر باستخدام Wrangler. إذا أنشأت Worker من لوحة التحكم فقط، أضف الربط من إعدادات Worker إن كان الخيار متاحًا.
+3. إعداد Rate Limiting binding باسم `LOGIN_RATE_LIMITER` بحد 10 طلبات لكل 60 ثانية لكل عنوان IP. تعريفه موجود في `wrangler.toml`.
 
-## 3) اختبار الخدمة
-افتح رابط Worker متبوعًا بـ /health. يجب أن يظهر:
-{"ok":true,"service":"alsalama-auth"}
+## 4) اختبار الخدمة
+افتح رابط Worker متبوعًا بـ `/health`. يجب أن يظهر:
+`{"ok":true,"service":"alsalama-auth"}`
 
-لا تختبر /login قبل إضافة السرّين. لا ترسل الأكواد أو ملف Service Account هنا.
+لا تختبر `/login` قبل إضافة السرّين. لا ترسل الأكواد أو ملف Service Account هنا.
 
 ## مهم قبل تشغيل النسخة الجديدة
 - لا تغيّر قواعد Firestore الحالية الآن.
 - لا توقف Anonymous Authentication الآن.
 - لا تنشر APK جديدًا الآن.
-- بعد نشر الخدمة وإرسال رابطها فقط، نربط شاشة الدخول بها ونحوّل Firebase إلى Custom Authentication، ثم نختبر جهازًا واحدًا.
-- بعد نجاح الاختبار نغيّر قواعد Firestore لتقبل UIDs الأربعة فقط. بهذه الطريقة لا يستطيع عميل مجهول أو غريب القراءة أو الإضافة.
+- بعد نشر الخدمة وإضافة الأسرار، نربط شاشة الدخول بها ونحوّل Firebase إلى Custom Authentication، ثم نختبر جهازًا واحدًا.
+- بعد نجاح الاختبار نغيّر قواعد Firestore لتقبل UIDs الموظفين فقط. بهذه الطريقة لا يستطيع عميل مجهول أو غريب القراءة أو الإضافة.
