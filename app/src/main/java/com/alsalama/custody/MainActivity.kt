@@ -80,6 +80,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
@@ -127,6 +128,8 @@ private fun findAccountByCode(code: String): LoginAccount? =
 
 class MainActivity : ComponentActivity() {
     private var showResumeSplash by mutableStateOf(false)
+    private var firebaseReady by mutableStateOf(false)
+    private var firebaseAuthError by mutableStateOf<String?>(null)
 
     override fun onStart() {
         super.onStart()
@@ -142,6 +145,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Sign in silently before allowing any cloud data screen to open.
+        ensureFirebaseSession()
         // Keep Firestore's persistent on-device cache enabled for offline reads and queued writes.
         FirebaseFirestore.getInstance().firestoreSettings =
             FirebaseFirestoreSettings.Builder()
@@ -150,15 +155,40 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        // Keep the existing screen composed underneath the temporary overlay,
-                        // preserving its navigation and input state while the app resumes.
-                        LoginScreen()
-                        if (showResumeSplash) {
-                            ResumeSplashOverlay(onFinished = { showResumeSplash = false })
+                    if (!firebaseReady) {
+                        FirebaseAccessGate(error = firebaseAuthError, onRetry = { ensureFirebaseSession() })
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LoginScreen()
+                            if (showResumeSplash) ResumeSplashOverlay(onFinished = { showResumeSplash = false })
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private fun ensureFirebaseSession() {
+        val auth = FirebaseAuth.getInstance()
+        if (auth.currentUser != null) { firebaseReady = true; firebaseAuthError = null; return }
+        firebaseReady = false
+        firebaseAuthError = null
+        auth.signInAnonymously()
+            .addOnSuccessListener { firebaseReady = true; firebaseAuthError = null }
+            .addOnFailureListener { error -> firebaseAuthError = error.localizedMessage ?: "تعذر تأمين الاتصال بقاعدة البيانات" }
+    }
+}
+
+@Composable
+private fun FirebaseAccessGate(error: String?, onRetry: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
+        Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
+            Text(if (error == null) "جارٍ تأمين الاتصال..." else "تعذر الاتصال الآمن بقاعدة البيانات", color = SalamaDark, fontSize = 19.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            if (error != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(error, color = MutedText, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = SalamaGreen)) { Text("إعادة المحاولة") }
             }
         }
     }

@@ -1,0 +1,32 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /expenses/{expenseId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['description','amount','currency','employeeName','employeeCode','createdAt','status'])
+        && request.resource.data.description is string
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.currency == 'EGP'
+        && request.resource.data.employeeName is string
+        && request.resource.data.employeeCode is string
+        && request.resource.data.status == 'active';
+      allow update, delete: if false;
+    }
+    match /custody_transactions/{transactionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['type','employeeName','amount','currency','createdBy','createdAt','status'])
+        && request.resource.data.type in ['funding','expense','return']
+        && request.resource.data.employeeName is string
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.currency == 'EGP'
+        && request.resource.data.status == 'active';
+      allow update, delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
