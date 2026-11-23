@@ -52,6 +52,8 @@ dependencies {
 
     // Firebase SDK versions are managed together by the Firebase BoM.
     implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
+    // App Check: verify that Firebase requests come from the genuine Android app.
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
 
