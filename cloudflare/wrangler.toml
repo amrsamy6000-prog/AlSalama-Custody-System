@@ -1,0 +1,9 @@
+name = "alsalama-auth"
+main = "worker.js"
+compatibility_date = "2026-11-23"
+
+# Protect the public code-login endpoint from repeated guessing.
+[[ratelimits]]
+name = "LOGIN_RATE_LIMITER"
+namespace_id = "731904"
+simple = { limit = 10, period = 60 }
