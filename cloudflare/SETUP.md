@@ -46,9 +46,16 @@ https://firebase.google.com/docs/auth/admin/create-custom-tokens
      "CODE_FOR_AHMED": {
        "uid": "salama_ahmed_hamdy",
        "employeeName": "أحمد حمدي"
-     }
+     },
+     "CODE_FOR_AHMED_HASSAN": { "uid": "salama_ahmed_hassan", "employeeName": "أحمد حسن" },
+     "CODE_FOR_AHMED_YASSER": { "uid": "salama_ahmed_yasser", "employeeName": "أحمد ياسر" },
+     "CODE_FOR_MOHAMED_EL_SAYED": { "uid": "salama_mohamed_elsayed", "employeeName": "محمد السيد" },
+     "CODE_FOR_USER1": { "uid": "salama_user1", "employeeName": "USER1" },
+     "CODE_FOR_USER2": { "uid": "salama_user2", "employeeName": "USER2" },
+     "CODE_FOR_USER3": { "uid": "salama_user3", "employeeName": "USER3" },
+     "CODE_FOR_USER4": { "uid": "salama_user4", "employeeName": "USER4" }
    }
-   ملاحظة: استبدل CODE_FOR_... بالأكواد الرقمية الفعلية كنصوص بين علامتي اقتباس.
+   ملاحظة: استبدل CODE_FOR_... بالأكواد الرقمية الفعلية كنصوص بين علامتي اقتباس. الخدمة تقبل أكوادًا رقمية من 4 إلى 6 أرقام، وتُحفظ كـ strings حتى لا يضيع الصفر في بداية الكود. أضف الحسابات الـ11 المعتمدة (الأربعة الحالية والسبعة الجديدة) إلى هذا السر؛ لا تضع الأكواد الحقيقية في GitHub أو المحادثة.
 3. إعداد Rate Limiting binding باسم `LOGIN_RATE_LIMITER` بحد 10 طلبات لكل 60 ثانية لكل عنوان IP. تعريفه موجود في `wrangler.toml`.
 
 ## 4) اختبار الخدمة
