@@ -770,7 +770,11 @@ private fun expenseCategoryIcon(category: String): String = when (displayExpense
 }
 
 @Composable
-private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
+private fun ExpenseEntryCard(
+    item: ExpenseRecord,
+    isNew: Boolean,
+    isHistorical: Boolean = false
+) {
     val categoryName = displayExpenseCategory(item.category)
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -793,14 +797,17 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
                     fontWeight = FontWeight.Bold,
                     lineHeight = 29.sp
                 )
-                if (isNew) {
+                if (isHistorical || isNew) {
                     Spacer(modifier = Modifier.size(7.dp))
                     Text(
-                        "جديد",
+                        if (isHistorical) "مصروف قديم" else "جديد",
                         modifier = Modifier
-                            .background(Color(0xFFDDEBE1), RoundedCornerShape(8.dp))
+                            .background(
+                                if (isHistorical) Color(0xFFE9E3DA) else Color(0xFFDDEBE1),
+                                RoundedCornerShape(8.dp)
+                            )
                             .padding(horizontal = 8.dp, vertical = 4.dp),
-                        color = Color(0xFF35634A),
+                        color = if (isHistorical) Color(0xFF76634F) else Color(0xFF35634A),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -808,8 +815,9 @@ private fun ExpenseEntryCard(item: ExpenseRecord, isNew: Boolean) {
             }
             Spacer(modifier = Modifier.height(5.dp))
             Text(
-                formatExpenseAmount(item.amount) + " جنيه",
-                color = SalamaGreen,
+                (if (isHistorical) "المبلغ القديم: " else "") +
+                    formatExpenseAmount(item.amount) + " جنيه",
+                color = if (isHistorical) Color(0xFF806B55) else SalamaGreen,
                 fontSize = 19.sp,
                 fontWeight = FontWeight.ExtraBold
             )
@@ -994,10 +1002,38 @@ private fun PersonExpensesScreen(
 
     Surface(modifier = Modifier.fillMaxSize(), color = PageBackground) {
         Column(modifier = Modifier.fillMaxSize()) {
+            if (selectedHistoryDate != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "مصروفات $person",
+                            color = SalamaDark,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            "يوم " + SimpleDateFormat("dd/MM/yyyy", Locale.US).format(selectedHistoryDate),
+                            color = SalamaGreen,
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
             Column(
                 modifier = Modifier.weight(1f).fillMaxWidth()
                     .verticalScroll(scrollState)
-                    .padding(horizontal = 16.dp, vertical = if (selectedHistoryDate == null) 10.dp else 16.dp)
+                    .padding(horizontal = 16.dp, vertical = if (selectedHistoryDate == null) 10.dp else 8.dp)
             ) {
                 if (selectedHistoryDate == null) {
                     TopBar(onSignOut)
@@ -1014,25 +1050,6 @@ private fun PersonExpensesScreen(
                         expenses = if (movementsLoaded) formatExpenseAmount(totalPersonExpenses) else "—",
                         remaining = if (movementsLoaded) formatExpenseAmount(remainingCustody) else "—"
                     )
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "مصروفات $person",
-                            color = SalamaDark,
-                            fontSize = 23.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        Spacer(modifier = Modifier.size(9.dp))
-                        Text(
-                            SimpleDateFormat("dd/MM/yyyy", Locale.US).format(selectedHistoryDate),
-                            color = SalamaGreen,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -1073,7 +1090,11 @@ private fun PersonExpensesScreen(
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(9.dp)
                     ) {
                         displayedExpenses.forEach { item ->
-                            ExpenseEntryCard(item = item, isNew = item.id !in seenExpenseIds)
+                            ExpenseEntryCard(
+                                item = item,
+                                isNew = selectedHistoryDate == null && item.id !in seenExpenseIds,
+                                isHistorical = selectedHistoryDate != null
+                            )
                         }
                     }
                 }
