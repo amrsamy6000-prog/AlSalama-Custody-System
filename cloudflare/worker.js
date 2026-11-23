@@ -106,7 +106,7 @@ export default {
     }
 
     const code = typeof body?.code === "string" ? body.code.trim() : "";
-    if (!/^\d{6}$/.test(code)) {
+    if (!/^\d{4,6}$/.test(code)) {
       return json({ error: "invalid_code" }, 401);
     }
 
