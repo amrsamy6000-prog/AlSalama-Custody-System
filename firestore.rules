@@ -2,10 +2,26 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Only Firebase sessions issued by the Cloudflare employee-code verifier
+    // carry this custom claim. A normal/anonymous Firebase account is not enough.
+    function isVerifiedEmployee() {
+      return request.auth != null
+        && request.auth.token.app_access == true;
+    }
+
     match /expenses/{expenseId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-        && request.resource.data.keys().hasAll(['description','amount','currency','employeeName','employeeCode','createdAt','status'])
+      allow read: if isVerifiedEmployee();
+      allow create: if isVerifiedEmployee()
+        && request.resource.data.keys().hasAll([
+          'description',
+          'amount',
+          'currency',
+          'employeeName',
+          'employeeCode',
+          'createdAt',
+          'status'
+        ])
         && request.resource.data.description is string
         && request.resource.data.amount is number
         && request.resource.data.amount > 0
@@ -15,11 +31,20 @@ service cloud.firestore {
         && request.resource.data.status == 'active';
       allow update, delete: if false;
     }
+
     match /custody_transactions/{transactionId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-        && request.resource.data.keys().hasAll(['type','employeeName','amount','currency','createdBy','createdAt','status'])
-        && request.resource.data.type in ['funding','expense','return']
+      allow read: if isVerifiedEmployee();
+      allow create: if isVerifiedEmployee()
+        && request.resource.data.keys().hasAll([
+          'type',
+          'employeeName',
+          'amount',
+          'currency',
+          'createdBy',
+          'createdAt',
+          'status'
+        ])
+        && request.resource.data.type in ['funding', 'expense', 'return']
         && request.resource.data.employeeName is string
         && request.resource.data.amount is number
         && request.resource.data.amount > 0
@@ -27,6 +52,9 @@ service cloud.firestore {
         && request.resource.data.status == 'active';
       allow update, delete: if false;
     }
-    match /{document=**} { allow read, write: if false; }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }
