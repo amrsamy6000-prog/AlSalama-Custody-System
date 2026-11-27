@@ -1548,7 +1548,7 @@ private fun LoginScreen() {
                                             serverError = "تعذر الاتصال بخدمة تسجيل الدخول. تحقق من الإنترنت وحاول مرة أخرى."
                                         }
 
-                                        runOnUiThread {
+                                        Handler(Looper.getMainLooper()).post {
                                             val token = customToken
                                             val name = employeeName
                                             if (token != null && name != null) {
