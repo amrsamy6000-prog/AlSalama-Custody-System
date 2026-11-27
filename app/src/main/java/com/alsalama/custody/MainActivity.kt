@@ -91,6 +91,9 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONObject
 import kotlinx.coroutines.delay
 
 private val SalamaGreen = Color(0xFF176B55)
@@ -107,21 +110,24 @@ private data class LoginAccount(
 
 // رمز الدخول يحدد واجهة الموظف فقط.
 private val loginAccounts = listOf(
-    LoginAccount(charArrayOf(52.toChar(), 54.toChar(), 57.toChar(), 49.toChar(), 51.toChar(), 54.toChar()).concatToString(), "عمرو سامي", "مدير التطبيق", listOf(
+    LoginAccount("", "عمرو سامي", "مدير التطبيق", listOf(
         "إدارة المستخدمين والصلاحيات", "جميع العهد والمصروفات",
         "التقارير والإعدادات", "تسجيل مصروفاته ومصروفات أحمد حسن"
     )),
-    LoginAccount(charArrayOf(52.toChar(), 52.toChar(), 49.toChar(), 52.toChar(), 48.toChar(), 48.toChar()).concatToString(), "سامي هنداوي", "الإدارة المالية", listOf(
+    LoginAccount("", "سامي هنداوي", "الإدارة المالية", listOf(
         "لوحة متابعة العهد الأربعة", "تمويل العهد",
         "الإجماليات والأرصدة والتقارير"
     )),
-    LoginAccount(charArrayOf(49.toChar(), 48.toChar(), 48.toChar(), 49.toChar(), 48.toChar(), 48.toChar()).concatToString(), "عبدالله", "مسؤول العمليات", listOf(
+    LoginAccount("", "عبدالله", "مسؤول العمليات", listOf(
         "تسجيل مصروفاته ومصروفات أحمد حسن", "الاطلاع على جميع العهد والمصروفات"
     )),
-    LoginAccount(charArrayOf(50.toChar(), 48.toChar(), 48.toChar(), 50.toChar(), 48.toChar(), 48.toChar()).concatToString(), "أحمد حمدي", "موظف", listOf(
+    LoginAccount("", "أحمد حمدي", "موظف", listOf(
         "تسجيل مصروفاته الشخصية", "الاطلاع على بياناته المالية فقط"
     ))
 )
+
+private fun findAccountByName(employeeName: String, code: String): LoginAccount? =
+    loginAccounts.firstOrNull { it.displayName == employeeName }?.copy(code = code)
 
 private fun findAccountByCode(code: String): LoginAccount? =
     loginAccounts.firstOrNull { it.code == code }
@@ -170,12 +176,11 @@ class MainActivity : ComponentActivity() {
 
     private fun ensureFirebaseSession() {
         val auth = FirebaseAuth.getInstance()
-        if (auth.currentUser != null) { firebaseReady = true; firebaseAuthError = null; return }
-        firebaseReady = false
+        // Never create anonymous sessions. Employees authenticate through the Cloudflare
+        // code verifier and Firebase Custom Token after submitting their employee code.
+        if (auth.currentUser?.isAnonymous == true) auth.signOut()
+        firebaseReady = true
         firebaseAuthError = null
-        auth.signInAnonymously()
-            .addOnSuccessListener { firebaseReady = true; firebaseAuthError = null }
-            .addOnFailureListener { error -> firebaseAuthError = error.localizedMessage ?: "تعذر تأمين الاتصال بقاعدة البيانات" }
     }
 }
 
@@ -1375,12 +1380,20 @@ private fun LoginScreen() {
     val context = LocalContext.current
     val preferences = remember { context.getSharedPreferences("custody_app", Context.MODE_PRIVATE) }
     var signedInAccount by remember {
-        mutableStateOf(loginAccounts.firstOrNull { it.code == preferences.getString("selected_code", null) })
+        mutableStateOf(
+            if (FirebaseAuth.getInstance().currentUser != null) {
+                findAccountByName(
+                    preferences.getString("selected_employee_name", null).orEmpty(),
+                    preferences.getString("selected_code", null).orEmpty()
+                )
+            } else null
+        )
     }
 
     if (signedInAccount != null) {
         SignedInScreen(account = signedInAccount!!, onSignOut = {
-            preferences.edit().remove("selected_code").apply()
+            FirebaseAuth.getInstance().signOut()
+            preferences.edit().remove("selected_code").remove("selected_employee_name").apply()
             signedInAccount = null
         })
         return
@@ -1492,18 +1505,76 @@ private fun LoginScreen() {
                         Spacer(modifier = Modifier.height(17.dp))
                         Button(
                             onClick = {
-                                if (accessCode.isBlank()) {
-                                    message = "اكتب رمز الدخول الأول، وبعدها دوس دخول."
+                                val submittedCode = accessCode.trim()
+                                if (!submittedCode.matches(Regex("^[0-9]{4,6}$"))) {
+                                    message = "اكتب كود الموظف الصحيح المكوّن من 4 إلى 6 أرقام."
                                 } else {
-                                    val account = findAccountByCode(accessCode.trim())
-                                    if (account != null) {
-                                        preferences.edit().putString("selected_code", account.code).apply()
-                                        signedInAccount = account
-                                        accessCode = ""
-                                        message = null
-                                    } else {
-                                        message = "رمز الدخول غير صحيح. راجع الرمز وحاول مرة تانية."
-                                    }
+                                    message = "جارٍ التحقق من كود الدخول..."
+                                    Thread {
+                                        var employeeName: String? = null
+                                        var customToken: String? = null
+                                        var serverError: String? = null
+                                        try {
+                                            val connection = (URL("https://alsalama-auth.amrsamy6000.workers.dev/login").openConnection() as HttpURLConnection).apply {
+                                                requestMethod = "POST"
+                                                connectTimeout = 15000
+                                                readTimeout = 15000
+                                                doOutput = true
+                                                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                                            }
+                                            try {
+                                                connection.outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
+                                                    writer.write(JSONObject().put("code", submittedCode).toString())
+                                                }
+                                                val status = connection.responseCode
+                                                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                                                val responseText = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+                                                val response = JSONObject(responseText.ifBlank { "{}" })
+                                                if (status in 200..299) {
+                                                    employeeName = response.optString("employeeName").takeIf { it.isNotBlank() }
+                                                    customToken = response.optString("customToken").takeIf { it.isNotBlank() }
+                                                } else {
+                                                    serverError = when (response.optString("error")) {
+                                                        "invalid_code" -> "كود الموظف غير صحيح أو غير مسجل."
+                                                        "too_many_attempts" -> "محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى."
+                                                        "server_configuration_error", "token_creation_failed" -> "تعذر إتمام تسجيل الدخول بسبب إعدادات الخدمة."
+                                                        else -> "تعذر التحقق من كود الدخول (HTTP $status)."
+                                                    }
+                                                }
+                                            } finally {
+                                                connection.disconnect()
+                                            }
+                                        } catch (_: Exception) {
+                                            serverError = "تعذر الاتصال بخدمة تسجيل الدخول. تحقق من الإنترنت وحاول مرة أخرى."
+                                        }
+
+                                        runOnUiThread {
+                                            val token = customToken
+                                            val name = employeeName
+                                            if (token != null && name != null) {
+                                                val account = findAccountByName(name, submittedCode)
+                                                if (account == null) {
+                                                    message = "تم التحقق من الكود، لكن الحساب غير مربوط بصلاحية داخل التطبيق. تواصل مع الإدارة."
+                                                } else {
+                                                    FirebaseAuth.getInstance().signInWithCustomToken(token)
+                                                        .addOnSuccessListener {
+                                                            preferences.edit()
+                                                                .putString("selected_code", submittedCode)
+                                                                .putString("selected_employee_name", name)
+                                                                .apply()
+                                                            signedInAccount = account
+                                                            accessCode = ""
+                                                            message = null
+                                                        }
+                                                        .addOnFailureListener {
+                                                            message = "تم التحقق من الكود لكن تعذر فتح جلسة Firebase. حاول مرة أخرى."
+                                                        }
+                                                }
+                                            } else {
+                                                message = serverError ?: "تعذر التحقق من كود الدخول."
+                                            }
+                                        }
+                                    }.start()
                                 }
                             },
                             modifier = Modifier
