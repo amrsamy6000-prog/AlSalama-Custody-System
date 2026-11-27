@@ -123,6 +123,20 @@ export default {
       });
     }
 
+    // Simple same-origin login tester. The token is never rendered or logged.
+    if (url.pathname === "/test" && request.method === "GET") {
+      const page = `<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#123c32"><title>اختبار دخول العهدة</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(145deg,#0d2824,#174b3e);font-family:Tahoma,Arial,sans-serif;color:#172b27}.card{width:min(100%,420px);background:#fff;border-radius:22px;padding:26px;box-shadow:0 18px 55px #0004}.mark{width:54px;height:54px;border-radius:16px;background:#e7f3ed;color:#176344;display:grid;place-items:center;font-size:27px;margin-bottom:16px}h1{font-size:22px;margin:0 0 8px}p{color:#66736e;font-size:14px;line-height:1.7;margin:0 0 22px}label{display:block;font-weight:bold;font-size:14px;margin-bottom:9px}input{width:100%;height:54px;border:1px solid #ccd8d2;border-radius:12px;padding:0 15px;font-size:22px;letter-spacing:5px;text-align:center;outline:none}input:focus{border-color:#23845d;box-shadow:0 0 0 3px #23845d22}button{width:100%;height:52px;margin-top:16px;border:0;border-radius:12px;background:#176344;color:#fff;font-size:16px;font-weight:bold;cursor:pointer}button:disabled{opacity:.6}.result{display:none;margin-top:16px;padding:13px;border-radius:12px;font-size:14px;line-height:1.7;overflow-wrap:anywhere}.ok{display:block;background:#e8f6ed;color:#176344}.err{display:block;background:#fff0ee;color:#a12d25}.hint{font-size:12px;text-align:center;margin:17px 0 0;color:#87918c}
+</style></head><body><main class="card"><div class="mark">✓</div><h1>اختبار تسجيل الدخول</h1><p>أدخل كود الموظف لاختبار الاتصال بخدمة العهدة. لن يتم عرض رمز الدخول السري على الصفحة.</p><form id="form"><label for="code">كود الموظف</label><input id="code" inputmode="numeric" autocomplete="off" maxlength="6" minlength="4" pattern="[0-9]{4,6}" placeholder="••••" required><button id="submit" type="submit">اختبار الدخول</button></form><div id="result" class="result" role="status" aria-live="polite"></div><div class="hint">مصنع السلامة · خدمة التحقق الآمن</div></main>
+<script>
+const form=document.getElementById('form'),code=document.getElementById('code'),btn=document.getElementById('submit'),result=document.getElementById('result');
+form.addEventListener('submit',async e=>{e.preventDefault();const value=code.value.trim();if(!/^[0-9]{4,6}$/.test(value)){result.className='result err';result.textContent='الكود يجب أن يتكون من 4 إلى 6 أرقام.';return}btn.disabled=true;btn.textContent='جارٍ الاختبار...';result.className='result';result.textContent='';try{const response=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:value})});const data=await response.json();if(response.ok&&data.customToken){result.className='result ok';result.textContent='تم التحقق بنجاح ✓ مرحبًا '+(data.employeeName||'بك')+' — خدمة الدخول تعمل بشكل صحيح.';code.value='';}else{const messages={invalid_code:'كود الموظف غير صحيح أو غير مسجل.',invalid_request:'بيانات الطلب غير مكتملة.',server_configuration_error:'يوجد خطأ في إعدادات الخدمة.',token_creation_failed:'تعذر إنشاء رمز الدخول؛ راجع إعدادات Firebase.',too_many_attempts:'محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.'};result.className='result err';result.textContent=messages[data.error]||('فشل الاختبار (HTTP '+response.status+').');}}catch(err){result.className='result err';result.textContent='تعذر الاتصال بالخدمة. تحقق من الإنترنت ثم أعد المحاولة.';}finally{btn.disabled=false;btn.textContent='اختبار الدخول';}});
+</script></body></html>`;
+      return new Response(page, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+    }
+
     if (url.pathname !== "/login" || request.method !== "POST") {
       return json({ error: "not_found" }, 404);
     }
