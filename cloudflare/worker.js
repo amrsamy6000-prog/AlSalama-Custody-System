@@ -86,24 +86,39 @@ export default {
     // Reports configuration readiness without exposing secret values.
     if (url.pathname === "/status" && request.method === "GET") {
       let employeesConfigured = false;
-      let serviceAccountConfigured = false;
+      let serviceAccountJsonPresent = false;
+      let serviceAccountJsonValid = false;
+      let hasClientEmail = false;
+      let hasPrivateKey = false;
+      let hasProjectId = false;
+      let privateKeyLooksPem = false;
       try {
         const accounts = JSON.parse(env.EMPLOYEE_CODES_JSON || "null");
         employeesConfigured = !!accounts && typeof accounts === "object" && !Array.isArray(accounts) && Object.keys(accounts).length > 0;
       } catch {}
       try {
-        const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON || "null");
-        serviceAccountConfigured = !!serviceAccount &&
-          typeof serviceAccount.client_email === "string" &&
-          typeof serviceAccount.private_key === "string" &&
-          typeof serviceAccount.project_id === "string";
+        const rawServiceAccount = env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
+        serviceAccountJsonPresent = rawServiceAccount.trim().length > 0;
+        const serviceAccount = JSON.parse(rawServiceAccount || "null");
+        serviceAccountJsonValid = !!serviceAccount && typeof serviceAccount === "object" && !Array.isArray(serviceAccount);
+        hasClientEmail = serviceAccountJsonValid && typeof serviceAccount.client_email === "string" && serviceAccount.client_email.length > 0;
+        hasPrivateKey = serviceAccountJsonValid && typeof serviceAccount.private_key === "string" && serviceAccount.private_key.length > 0;
+        hasProjectId = serviceAccountJsonValid && typeof serviceAccount.project_id === "string" && serviceAccount.project_id.length > 0;
+        privateKeyLooksPem = hasPrivateKey && serviceAccount.private_key.includes("-----BEGIN PRIVATE KEY-----") && serviceAccount.private_key.includes("-----END PRIVATE KEY-----");
       } catch {}
+      const serviceAccountConfigured = serviceAccountJsonValid && hasClientEmail && hasPrivateKey && hasProjectId;
       return json({
         ok: employeesConfigured && serviceAccountConfigured,
         service: "alsalama-auth",
         checks: {
           employeeCodesConfigured: employeesConfigured,
-          firebaseServiceAccountConfigured: serviceAccountConfigured
+          firebaseServiceAccountConfigured: serviceAccountConfigured,
+          serviceAccountJsonPresent,
+          serviceAccountJsonValid,
+          hasClientEmail,
+          hasPrivateKey,
+          hasProjectId,
+          privateKeyLooksPem
         }
       });
     }
